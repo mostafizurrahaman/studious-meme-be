@@ -1,0 +1,2375 @@
+{
+  "info": {
+    "_postman_id": "Malamal-API-Collection",
+    "name": "Malamal API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "signup"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Signup OTP Again",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/send-signup-otp-again",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "send-signup-otp-again"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userEmail\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Signup OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/verify-signup-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "verify-signup-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userEmail\": \"john@example.com\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Signin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "signin"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile Photo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/update-profile-photo",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "update-profile-photo"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "user",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile Data",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/update-profile-data",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "update-profile-data"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"phone\": \"01700000000\",\n  \"dob\": \"1990-01-01T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "change-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"Password123!\",\n  \"newPassword\": \"NewPass123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "forgot-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Forgot Password OTP Again",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/send-forgot-password-otp-again",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "send-forgot-password-otp-again"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"forgot-password-token-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Forgot Password OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/verify-forgot-password-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "verify-forgot-password-otp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"forgot-password-token-here\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "reset-password"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetPasswordToken\": \"reset-password-token-here\",\n  \"newPassword\": \"NewPass123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Fetch Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get New Access Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "refreshToken={{refreshToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/access-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "access-token"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Account",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/deactive-account",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "deactive-account"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"deactivationReason\": \"No longer need the account\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/delete-account",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "delete-account"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/admin-get-all?page=1&limit=10&searchTerm=john&sort=-createdAt",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "admin-get-all"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "john"
+                },
+                {
+                  "key": "sort",
+                  "value": "-createdAt"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/admin-users/:userId/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "admin-users", ":userId", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/admin-users/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["user", "admin-users", ":userId"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Page",
+      "item": [
+        {
+          "name": "Create Or Update Page",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/page/create-or-update",
+              "host": ["{{baseUrl}}"],
+              "path": ["page", "create-or-update"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"about-us\",\n  \"title\": \"About Us\",\n  \"content\": \"Malamal is a trusted hardware and industrial supply platform serving customers across Bangladesh.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Pages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/page/retrieve",
+              "host": ["{{baseUrl}}"],
+              "path": ["page", "retrieve"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Page By Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/page/retrieve/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["page", "retrieve", ":slug"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Create Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@example.com\",\n  \"password\": \"AdminPass123!\",\n  \"phone\": \"01700000001\"\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Admins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Admin By UserId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins", ":userId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Admin",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins", ":userId"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"name\": \"Updated Admin\",\n  \"email\": \"updated-admin@example.com\",\n  \"phone\": \"01700000002\",\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{superAdminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins", ":userId"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "item": [
+        {
+          "name": "Initiate PortPOS Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/portpos/init/:orderId",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "portpos", "init", ":orderId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "PortPOS IPN",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payment/portpos/ipn",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "portpos", "ipn"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoice_id\": \"INV-123456\",\n  \"reference\": \"ORD-123456789\",\n  \"amount\": 12500,\n  \"status\": \"PAID\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify PortPOS Payment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/portpos/verify/:orderId",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "portpos", "verify", ":orderId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refund PortPOS Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/portpos/refund/:orderId",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "portpos", "refund", ":orderId"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 2000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/my-payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "my-payments"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Payments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/admin?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "admin"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Coupon",
+      "item": [
+        {
+          "name": "Verify Coupon",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/coupon/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupon", "verify"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"couponCode\": \"WELCOME10\",\n  \"city\": \"Dhaka\",\n  \"address\": \"House 12, Road 5, Dhaka\",\n  \"items\": [\n    {\n      \"unitPrice\": 12500,\n      \"quantity\": 2,\n      \"weightKg\": 2.4,\n      \"isNoCOD\": false\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coupon/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupon", "admin"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"WELCOME10\",\n  \"label\": \"10% off\",\n  \"description\": \"Welcome offer for new and returning customers\",\n  \"discountType\": \"PERCENTAGE\",\n  \"discountValue\": 10,\n  \"minSubtotal\": 5000,\n  \"expiresAt\": \"2027-12-31T23:59:59+06:00\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Coupons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coupon/admin?page=1&limit=10&searchTerm=welcome&isActive=true&discountType=PERCENTAGE",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupon", "admin"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "welcome"
+                },
+                {
+                  "key": "isActive",
+                  "value": "true"
+                },
+                {
+                  "key": "discountType",
+                  "value": "PERCENTAGE"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Coupon",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coupon/admin/:couponId",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupon", "admin", ":couponId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Coupon",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coupon/admin/:couponId",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupon", "admin", ":couponId"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"12% off\",\n  \"discountType\": \"PERCENTAGE\",\n  \"discountValue\": 12,\n  \"minSubtotal\": 6500,\n  \"expiresAt\": \"2028-12-31T23:59:59+06:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Coupon",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coupon/admin/:couponId",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupon", "admin", ":couponId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Coupon Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coupon/admin/:couponId/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["coupon", "admin", ":couponId", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Comparison History",
+      "item": [
+        {
+          "name": "Get My Comparison History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compare",
+              "host": ["{{baseUrl}}"],
+              "path": ["compare"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Comparison Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compare",
+              "host": ["{{baseUrl}}"],
+              "path": ["compare"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"product-id-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Comparison Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compare/my-items",
+              "host": ["{{baseUrl}}"],
+              "path": ["compare", "my-items"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Comparison History (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compare/admin?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["compare", "admin"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Comparison Insights (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compare/admin/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["compare", "admin", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Comparison Item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compare/:productId",
+              "host": ["{{baseUrl}}"],
+              "path": ["compare", ":productId"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Wishlist History",
+      "item": [
+        {
+          "name": "Get My Wishlist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wishlist",
+              "host": ["{{baseUrl}}"],
+              "path": ["wishlist"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Wishlist Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wishlist",
+              "host": ["{{baseUrl}}"],
+              "path": ["wishlist"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"product-id-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Wishlist (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wishlist/admin?page=1&limit=10&category=power-tools",
+              "host": ["{{baseUrl}}"],
+              "path": ["wishlist", "admin"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "category",
+                  "value": "power-tools"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Wishlist Insights (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wishlist/admin/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["wishlist", "admin", "summary"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Wishlist Item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wishlist/:productId",
+              "host": ["{{baseUrl}}"],
+              "path": ["wishlist", ":productId"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Contact",
+      "item": [
+        {
+          "name": "Get All Contacts (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contact",
+              "host": ["{{baseUrl}}"],
+              "path": ["contact"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Contact",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contact",
+              "host": ["{{baseUrl}}"],
+              "path": ["contact"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"company\": \"ABC Construction\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"01700000000\",\n  \"subject\": \"Bulk hardware quote\",\n  \"products\": \"Drill machine, safety helmet, ladder\",\n  \"brand\": \"Bosch\",\n  \"message\": \"We need a quotation for an upcoming construction project in Dhaka.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Hero Section",
+      "item": [
+        {
+          "name": "Get Home Content",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hero/home",
+              "host": ["{{baseUrl}}"],
+              "path": ["hero", "home"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Hero Section",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hero/heroes",
+              "host": ["{{baseUrl}}"],
+              "path": ["hero", "heroes"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"slides\": [\n    {\n      \"imageAlt\": \"Hero slide 1\",\n      \"title\": \"Power Tools\",\n      \"description\": \"Top quality power tools for professionals\",\n      \"clickUrl\": \"/shop\"\n    },\n    {\n      \"imageAlt\": \"Hero slide 2\",\n      \"title\": \"Construction Supplies\",\n      \"description\": \"Reliable hardware for every project\",\n      \"clickUrl\": \"/shop\"\n    }\n  ],\n  \"features\": [\n    {\n      \"imageAlt\": \"Fast delivery\",\n      \"title\": \"Fast Delivery\",\n      \"description\": \"Quick shipping across Bangladesh\",\n      \"clickUrl\": \"/shop\"\n    },\n    {\n      \"imageAlt\": \"Trusted support\",\n      \"title\": \"Trusted Support\",\n      \"description\": \"Get expert help when you need it\",\n      \"clickUrl\": \"/contact\"\n    }\n  ],\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "slides[0].image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "slides[1].image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "features[0].image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "features[1].image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Hero Sections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hero/heroes",
+              "host": ["{{baseUrl}}"],
+              "path": ["hero", "heroes"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Hero Section",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hero/heroes/:heroSectionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["hero", "heroes", ":heroSectionId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Hero Section",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hero/heroes/:heroSectionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["hero", "heroes", ":heroSectionId"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"slides\": [\n    {\n      \"imageAlt\": \"Hero slide 1\",\n      \"title\": \"Power Tools\",\n      \"description\": \"Top quality power tools for professionals\",\n      \"clickUrl\": \"/shop\"\n    },\n    {\n      \"imageAlt\": \"Hero slide 2\",\n      \"title\": \"Construction Supplies\",\n      \"description\": \"Reliable hardware for every project\",\n      \"clickUrl\": \"/shop\"\n    }\n  ],\n  \"features\": [\n    {\n      \"imageAlt\": \"Fast delivery\",\n      \"title\": \"Fast Delivery\",\n      \"description\": \"Quick shipping across Bangladesh\",\n      \"clickUrl\": \"/shop\"\n    },\n    {\n      \"imageAlt\": \"Trusted support\",\n      \"title\": \"Trusted Support\",\n      \"description\": \"Get expert help when you need it\",\n      \"clickUrl\": \"/contact\"\n    }\n  ],\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "slides[0].image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "slides[1].image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "features[0].image",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "features[1].image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Hero Section",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hero/heroes/:heroSectionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["hero", "heroes", ":heroSectionId"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Brand",
+      "item": [
+        {
+          "name": "Create Brand",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/brand/brands",
+              "host": ["{{baseUrl}}"],
+              "path": ["brand", "brands"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"name\": \"Bosch\",\n  \"slug\": \"bosch\",\n  \"description\": \"Bosch tools and accessories\",\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Brands",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/brand/brands?page=1&limit=10&searchTerm=bosch",
+              "host": ["{{baseUrl}}"],
+              "path": ["brand", "brands"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "bosch"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Brands",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/brand/brands/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["brand", "brands", "active"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Brand By Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/brand/brands/active/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["brand", "brands", "active", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Brand By Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/brand/brands/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["brand", "brands", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Brand",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/brand/brands/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["brand", "brands", ":slug"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"name\": \"Bosch\",\n  \"slug\": \"bosch\",\n  \"description\": \"Bosch tools and accessories\",\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Brand",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/brand/brands/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["brand", "brands", ":slug"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Category",
+      "item": [
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "categories"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"name\": \"Power Tools\",\n  \"slug\": \"power-tools\",\n  \"description\": \"Drills, grinders, saws and more\",\n  \"accent\": \"#0F766E\",\n  \"isActive\": true,\n  \"subCategories\": [\n    {\n      \"name\": \"Cordless Drills\",\n      \"slug\": \"cordless-drills\",\n      \"description\": \"Battery-powered drill range\",\n      \"accent\": \"#2563EB\",\n      \"isActive\": true\n    }\n  ]\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "categories", "active"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Category By Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories/active/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "categories", "active", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category By Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "categories", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "categories", ":slug"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"name\": \"Power Tools\",\n  \"slug\": \"power-tools\",\n  \"description\": \"Drills, grinders, saws and more\",\n  \"accent\": \"#0F766E\",\n  \"isActive\": true,\n  \"subCategories\": [\n    {\n      \"name\": \"Cordless Drills\",\n      \"slug\": \"cordless-drills\",\n      \"description\": \"Battery-powered drill range\",\n      \"accent\": \"#2563EB\",\n      \"isActive\": true\n    }\n  ]\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "categories", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Category SubCategory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories/:slug/sub-categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["category", "categories", ":slug", "sub-categories"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"name\": \"Cordless Drills\",\n  \"slug\": \"cordless-drills\",\n  \"description\": \"Battery-powered drill range\",\n  \"accent\": \"#2563EB\",\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Category SubCategory",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories/:slug/sub-categories/:subCategorySlug",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "category",
+                "categories",
+                ":slug",
+                "sub-categories",
+                ":subCategorySlug"
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"name\": \"Cordless Drills\",\n  \"slug\": \"cordless-drills\",\n  \"description\": \"Battery-powered drill range\",\n  \"accent\": \"#2563EB\",\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Category SubCategory",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/category/categories/:slug/sub-categories/:subCategorySlug",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "category",
+                "categories",
+                ":slug",
+                "sub-categories",
+                ":subCategorySlug"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Product",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/product/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "products"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"title\": \"Cordless Drill X1\",\n  \"slug\": \"cordless-drill-x1\",\n  \"sku\": \"CDRILL-X1\",\n  \"price\": 12500,\n  \"oldPrice\": 14900,\n  \"badge\": \"New\",\n  \"brand\": \"brand-id-here\",\n  \"category\": \"category-id-here\",\n  \"subCategorySlug\": \"cordless-drills\",\n  \"weightKg\": 2.4,\n  \"stock\": 25,\n  \"rating\": 4.7,\n  \"isFeatured\": true,\n  \"isNoCOD\": false,\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product/products?page=1&limit=12&searchTerm=drill&sort=latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "12"
+                },
+                {
+                  "key": "searchTerm",
+                  "value": "drill"
+                },
+                {
+                  "key": "sort",
+                  "value": "latest"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product/products/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "products", "active"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Product By Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product/products/active/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "products", "active", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product By Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product/products/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "products", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/product/products/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "products", ":slug"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "data",
+                  "type": "text",
+                  "value": "{\n  \"title\": \"Cordless Drill X1\",\n  \"slug\": \"cordless-drill-x1\",\n  \"sku\": \"CDRILL-X1\",\n  \"price\": 12500,\n  \"oldPrice\": 14900,\n  \"badge\": \"New\",\n  \"brand\": \"brand-id-here\",\n  \"category\": \"category-id-here\",\n  \"subCategorySlug\": \"cordless-drills\",\n  \"weightKg\": 2.4,\n  \"stock\": 25,\n  \"rating\": 4.7,\n  \"isFeatured\": true,\n  \"isNoCOD\": false,\n  \"isActive\": true\n}"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/product/products/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "products", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Products By Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product/products/by-category/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "products", "by-category", ":slug"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Products By SubCategory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product/products/by-sub-category/:subCategorySlug",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "product",
+                "products",
+                "by-sub-category",
+                ":subCategorySlug"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Order",
+      "item": [
+        {
+          "name": "Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/order/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "checkout"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"sku\": \"CDRILL-X1\",\n      \"quantity\": 2\n    }\n  ],\n  \"customer\": {\n    \"name\": \"John Doe\",\n    \"phone\": \"01700000000\",\n    \"email\": \"john@example.com\",\n    \"address\": \"House 12, Road 5, Dhaka\",\n    \"city\": \"Dhaka\",\n    \"note\": \"Call before delivery\"\n  },\n  \"couponCode\": \"WELCOME10\",\n  \"paymentMethod\": \"PORTPOS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Checkout Preview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/order/checkout-preview",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "checkout-preview"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"sku\": \"CDRILL-X1\",\n      \"quantity\": 2\n    }\n  ],\n  \"customer\": {\n    \"name\": \"John Doe\",\n    \"phone\": \"01700000000\",\n    \"email\": \"john@example.com\",\n    \"address\": \"House 12, Road 5, Dhaka\",\n    \"city\": \"Dhaka\",\n    \"note\": \"Call before delivery\"\n  },\n  \"couponCode\": \"WELCOME10\",\n  \"paymentMethod\": \"PORTPOS\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/order/my-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "my-orders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Single Order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/order/my-orders/:orderId",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "my-orders", ":orderId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/order/orders/:orderId",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "orders", ":orderId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Orders (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/order/admin/orders?page=1&limit=10&status=PLACED",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "admin", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "PLACED"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/order/admin/orders/:orderId/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "admin", "orders", ":orderId", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROCESSING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Get My Cart",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Cart Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "items"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"product-id-here\",\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Cart Item",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "items"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"product-id-here\",\n  \"quantity\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Cart Item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/items/:productId",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "items", ":productId"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{userAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/clear",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "clear"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Carts (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/admin?page=1&limit=10&category=power-tools",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "admin"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "category",
+                  "value": "power-tools"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cart Insights (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/admin/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["cart", "admin", "summary"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
