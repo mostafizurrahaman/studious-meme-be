@@ -74,12 +74,16 @@ jobs:
 
             echo "==> Updating source code"
             if [ ! -d ".git" ]; then
-              git clone -b main ${{ secrets.REPO_URL }} .
+            git clone -b main "${{ secrets.REPO_URL }}" .
             else
-              git remote set-url origin ${{ secrets.REPO_URL }}
-              git fetch origin main
-              git reset --hard origin/main
-              git clean -fd
+                if git remote get-url origin >/dev/null 2>&1; then
+                  git remote set-url origin "${{ secrets.REPO_URL }}"
+                else
+                  git remote add origin "${{ secrets.REPO_URL }}"
+                fi
+                git fetch origin main
+                git reset --hard origin/main
+                git clean -fd
             fi
 
             echo "==> Creating .env file"
