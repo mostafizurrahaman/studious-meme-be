@@ -37,8 +37,8 @@ const categorySchema = new Schema<ICategory>(
       validate: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         validator: function (value: any[]) {
-          const names = value.map((v) => v.name);
-          const slugs = value.map((v) => v.slug);
+          const names = value.map(v => v.name);
+          const slugs = value.map(v => v.slug);
 
           return (
             new Set(names).size === names.length &&
@@ -50,6 +50,8 @@ const categorySchema = new Schema<ICategory>(
     },
     image: { type: String },
     description: { type: String },
+    metaTitle: { type: String },
+    metaDescription: { type: String },
     accent: { type: String },
     isActive: { type: Boolean, default: true },
   },

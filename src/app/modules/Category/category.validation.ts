@@ -29,8 +29,18 @@ const categoryBaseSchema = z.object({
     .string({ error: 'Category slug is required!' })
     .trim()
     .min(1, { message: 'Category slug is required!' }),
+
   subCategories: z.array(categorySubCategorySchema).optional(),
   image: z.string().optional(),
+  metaTitle: z
+    .string({
+      error: () => 'Meta title is required!',
+    })
+    .optional(),
+  metaDescription: z.string({
+    error: () => 'Meta description is required!',
+  }),
+
   description: z
     .string({ error: 'Category description is required!' })
     .trim()
