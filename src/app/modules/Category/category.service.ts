@@ -32,7 +32,7 @@ const createCategoryIntoDB = async (
 const getAllCategoriesFromDB = async () =>
   CategoryModel.find({}).sort({ name: 1 }).lean();
 
-// 3. getActiveCategoriesFromDB
+// 3. getActiveCategoriesFromDB`
 const getActiveCategoriesFromDB = async () =>
   CategoryModel.find({ isActive: true })
     .sort({ name: 1 })

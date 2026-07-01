@@ -13,6 +13,8 @@ export interface ICategory {
   subCategories: ISubCategoryItem[];
   image?: string;
   description?: string;
+  metaTitle?: string;
+  metaDescription?: string;
   accent?: string;
   isActive: boolean;
   createdAt?: Date;
