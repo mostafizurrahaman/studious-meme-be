@@ -41,7 +41,7 @@ const getAllActiveProducts = asyncHandler(async (req, res) => {
 // 4. getProduct
 const getProduct = asyncHandler(async (req, res) => {
   const result = await ProductService.getProductBySlugFromDB(
-    getParam(req.params.slug),
+    encodeURI(getParam(req.params.slug)),
   );
 
   sendResponse(res, {
@@ -54,7 +54,7 @@ const getProduct = asyncHandler(async (req, res) => {
 // 4. getActiveProduct
 const getActiveProduct = asyncHandler(async (req, res) => {
   const result = await ProductService.getActiveProductBySlugFromDB(
-    getParam(req.params.slug),
+    encodeURI(getParam(req.params.slug)),
   );
 
   sendResponse(res, {
@@ -67,7 +67,7 @@ const getActiveProduct = asyncHandler(async (req, res) => {
 // 5. updateProduct
 const updateProduct = asyncHandler(async (req, res) => {
   const result = await ProductService.updateProductIntoDB(
-    getParam(req.params.slug),
+    encodeURI(getParam(req.params.slug)),
     req.body,
     req.files,
   );
@@ -84,7 +84,7 @@ const updateProduct = asyncHandler(async (req, res) => {
 // 5. deleteProduct
 const deleteProduct = asyncHandler(async (req, res) => {
   const result = await ProductService.deleteProductFromDB(
-    getParam(req.params.slug),
+    encodeURI(getParam(req.params.slug)),
   );
 
   if (!result) throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
@@ -99,7 +99,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
 // 6. getProductsByCategorySlug
 const getProductsByCategorySlug = asyncHandler(async (req, res) => {
   const result = await ProductService.getProductsByCategorySlugFromDB(
-    getParam(req.params.slug),
+    encodeURI(getParam(req.params.slug)),
     req.query,
   );
 
@@ -114,7 +114,7 @@ const getProductsByCategorySlug = asyncHandler(async (req, res) => {
 // 7. getProductsBySubCategorySlug
 const getProductsBySubCategorySlug = asyncHandler(async (req, res) => {
   const result = await ProductService.getProductsBySubCategorySlugFromDB(
-    getParam(req.params.subCategorySlug),
+    encodeURI(getParam(req.params.subCategorySlug)),
     req.query,
   );
 

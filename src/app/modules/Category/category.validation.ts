@@ -15,6 +15,16 @@ const categorySubCategorySchema = z.object({
     .string({ error: 'SubCategory description is required!' })
     .trim()
     .min(1, { message: 'SubCategory description is required!' }),
+  metaTitle: z
+    .string({
+      error: () => 'Meta title is required!',
+    })
+    .optional(),
+  metaDescription: z
+    .string({
+      error: () => 'Meta description is required!',
+    })
+    .optional(),
   accent: z.string().optional(),
   isActive: z.boolean().optional(),
 });
@@ -37,9 +47,11 @@ const categoryBaseSchema = z.object({
       error: () => 'Meta title is required!',
     })
     .optional(),
-  metaDescription: z.string({
-    error: () => 'Meta description is required!',
-  }),
+  metaDescription: z
+    .string({
+      error: () => 'Meta description is required!',
+    })
+    .optional(),
 
   description: z
     .string({ error: 'Category description is required!' })
