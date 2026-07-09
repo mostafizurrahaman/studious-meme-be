@@ -82,12 +82,12 @@ const getString = (value: unknown) =>
 const csv = (value: unknown) =>
   getString(value)
     .split(',')
-    .map((item) => item.trim())
+    .map(item => item.trim())
     .filter(Boolean);
 
 const pickFields = (value: unknown) => {
   const fields = csv(value)
-    .filter((field) => /^[a-zA-Z0-9_.-]+$/.test(field))
+    .filter(field => /^[a-zA-Z0-9_.-]+$/.test(field))
     .join(' ');
 
   return fields || undefined;
@@ -160,7 +160,7 @@ const buildProductFilters = async (query: Record<string, unknown>) => {
   if (searchTerm) {
     and.push({
       $or: ['title', 'sku', 'slug', 'badge', 'features', 'description'].map(
-        (field) => ({
+        field => ({
           [field]: { $regex: escapeRegExp(searchTerm), $options: 'i' },
         }),
       ),
@@ -194,7 +194,7 @@ const buildProductFilters = async (query: Record<string, unknown>) => {
       $or: [
         { slug: { $in: brandValues } },
         { name: { $in: brandValues } },
-        ...brandValues.map((value) => ({
+        ...brandValues.map(value => ({
           name: { $regex: `^${escapeRegExp(value)}$`, $options: 'i' },
         })),
       ],
@@ -203,7 +203,7 @@ const buildProductFilters = async (query: Record<string, unknown>) => {
       .lean();
 
     filter.brand = brands.length
-      ? { $in: brands.map((brand) => brand._id) }
+      ? { $in: brands.map(brand => brand._id) }
       : null;
   }
 
@@ -279,7 +279,7 @@ const buildProductFilters = async (query: Record<string, unknown>) => {
       })
         .select('_id')
         .lean();
-      filter.category = { $in: categories.map((category) => category._id) };
+      filter.category = { $in: categories.map(category => category._id) };
     }
   }
 
@@ -290,7 +290,7 @@ const buildProductFilters = async (query: Record<string, unknown>) => {
       referenceFilters.push(
         CategoryModel.find({ isActive: true })
           .distinct('_id')
-          .then((categoryIds) => {
+          .then(categoryIds => {
             filter.category = { $in: categoryIds };
           }),
       );
@@ -300,7 +300,7 @@ const buildProductFilters = async (query: Record<string, unknown>) => {
       referenceFilters.push(
         BrandModel.find({ isActive: true })
           .distinct('_id')
-          .then((brandIds) => {
+          .then(brandIds => {
             filter.brand = { $in: brandIds };
           }),
       );
@@ -373,7 +373,7 @@ const createProductIntoDB = async (
     });
   } catch (error) {
     await Promise.all(
-      uploadedImages.map((url) => deleteImageFromCloudinary(url)),
+      uploadedImages.map(url => deleteImageFromCloudinary(url)),
     );
 
     throw error;
@@ -397,9 +397,7 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
   if (fields) {
     productsQuery = productsQuery.select(fields);
   } else {
-    productsQuery = productsQuery
-      .populate('brand')
-      .populate('category');
+    productsQuery = productsQuery.populate('brand').populate('category');
   }
 
   const [data, total] = await Promise.all([
@@ -434,7 +432,10 @@ const getProductBySlugFromDB = async (slug: string) => {
 
 // 5. getActiveProductBySlugFromDB
 const getActiveProductBySlugFromDB = async (slug: string) => {
-  const doc = await ProductModel.findOne({ slug, isActive: true })
+  const doc = await ProductModel.findOne({
+    slug,
+    isActive: true,
+  })
     .populate({ path: 'brand', match: { isActive: true } })
     .populate({ path: 'category', match: { isActive: true } })
     .lean();
@@ -538,7 +539,7 @@ const updateProductIntoDB = async (
 
     if (!updated) {
       await Promise.all(
-        uploadedImages.map((url) => deleteImageFromCloudinary(url)),
+        uploadedImages.map(url => deleteImageFromCloudinary(url)),
       );
       throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
     }
@@ -546,15 +547,15 @@ const updateProductIntoDB = async (
     if (uploadedImages.length > 0) {
       await Promise.all(
         existingImages
-          .filter((url) => !nextImages.includes(url))
-          .map((url) => deleteImageFromCloudinary(url)),
+          .filter(url => !nextImages.includes(url))
+          .map(url => deleteImageFromCloudinary(url)),
       );
     }
 
     return updated;
   } catch (error) {
     await Promise.all(
-      uploadedImages.map((url) => deleteImageFromCloudinary(url)),
+      uploadedImages.map(url => deleteImageFromCloudinary(url)),
     );
 
     throw error;

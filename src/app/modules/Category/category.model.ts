@@ -27,6 +27,8 @@ const categorySchema = new Schema<ICategory>(
             },
             image: { type: String },
             description: { type: String },
+            metaTitle: { type: String },
+            metaDescription: { type: String },
             accent: { type: String },
             isActive: { type: Boolean, default: true },
           },
