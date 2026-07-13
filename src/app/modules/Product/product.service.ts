@@ -7,6 +7,10 @@ import { CategoryModel } from '../Category/category.model';
 import { MulterFile } from '../../lib/upload';
 import { BrandModel } from '../Brand/brand.model';
 import { DEFAULT_SELLING_UNIT, normalizeSellingUnit } from './selling-unit';
+import { TGetAllProductQueryType } from './product.validation';
+import mongoose, { PipelineStage, Types } from 'mongoose';
+import { toPositiveNumber } from '../../utils/toPositiveNumber';
+import { isSlug } from '../../utils/isSlug';
 
 type ProductSort = Record<string, 1 | -1>;
 
@@ -416,6 +420,313 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
   };
 };
 
+// 2.1 Get Connection (welcome):
+const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
+  const {
+    page = 1,
+    limit = 10,
+    sort,
+    searchTerm,
+    brand,
+    b,
+    category,
+    c,
+    excludeSlug,
+    includeInactive,
+    p,
+    price,
+    stock,
+    subCategory,
+    subCategorySlug,
+    tag,
+  } = query;
+
+  // Limit and pagination:
+  const currentPage = toPositiveNumber(page, 1);
+  const currentLimit = toPositiveNumber(limit, 10);
+  const skip = (currentPage - 1) * currentLimit;
+
+  const pipeline: PipelineStage[] = [];
+
+  // Category based filter:
+  const filterCategory = getString(category || c);
+  const filterSubCategory = getString(subCategory || subCategorySlug);
+  const filterBrands =
+    getString(brand || b)
+      ?.split(',')
+      ?.map(v => decodeURIComponent(v.trim()))
+      .filter(Boolean) ?? [];
+
+  const brandIds = filterBrands
+    .filter(v => mongoose.isValidObjectId(v))
+    .map(v => new Types.ObjectId(v));
+
+  const brandTexts = filterBrands.filter(v => !mongoose.isValidObjectId(v));
+
+  if (filterCategory && mongoose.isValidObjectId(filterCategory)) {
+    pipeline.push({
+      $match: {
+        category: new Types.ObjectId(filterCategory),
+      },
+    });
+  }
+
+  // Sperical  filter for sub slug (if slug provided for category or c)
+  if (filterSubCategory) {
+    pipeline.push({
+      $match: {
+        subCategorySlug: filterSubCategory,
+      },
+    });
+  }
+
+  // Lookup  category && Category Lookup:
+  pipeline.push({
+    $lookup: {
+      from: 'categories',
+      let: {
+        categoryId: '$category',
+        productSubCategorySlug: '$subCategorySlug',
+      },
+      as: 'categoryDetails',
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $eq: ['$_id', '$$categoryId'],
+            },
+          },
+        },
+
+        {
+          $project: {
+            name: 1,
+            image: 1,
+            slug: 1,
+            accent: 1,
+            description: 1,
+            metaTitle: 1,
+            metaDescription: 1,
+            isActive: true,
+            subCategories: {
+              $filter: {
+                input: '$subCategories',
+                as: 'subCategory',
+                cond: {
+                  $eq: ['$$subCategory.slug', '$$productSubCategorySlug'],
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  // Lookup Brand:
+  pipeline.push({
+    $lookup: {
+      from: 'brands',
+      localField: 'brand',
+      foreignField: '_id',
+      as: 'brandDeails',
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$categoryDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$categoryDetails.subCategories',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$brandDeails',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  // Do the final Projection:
+  pipeline.push({
+    $addFields: {
+      // Category Fields:
+      categoryId: { $ifNull: ['$categoryDetails._id', null] },
+      categoryName: { $ifNull: ['$categoryDetails.name', null] },
+      categorySlug: { $ifNull: ['$categoryDetails.slug', null] },
+      categoryImage: { $ifNull: ['$categoryDetails.image', null] },
+      categoryDescription: {
+        $ifNull: ['$categoryDetails.description', null],
+      },
+      categoryMetaTitle: {
+        $ifNull: ['$categoryDetails.metaTitle', null],
+      },
+      categoryMetaDescription: {
+        $ifNull: ['$categoryDetails.metaDescription', null],
+      },
+      isCategoryActive: {
+        $ifNull: ['$categoryDetails.isActive', false],
+      },
+      categoryAccent: {
+        $ifNull: ['$categoryDetails.accent', null],
+      },
+
+      // Subcategory Fields:
+
+      subCategoryName: {
+        $ifNull: ['$categoryDetails.subCategories.name', null],
+      },
+      subCategoryImage: {
+        $ifNull: ['$categoryDetails.subCategories.image', null],
+      },
+      subCategorySlug: {
+        $ifNull: ['$categoryDetails.subCategories.slug', null],
+      },
+      subCategoryDescription: {
+        $ifNull: ['$categoryDetails.subCategories.description', null],
+      },
+      subCategoryMetaTitle: {
+        $ifNull: ['$categoryDetails.subCategories.metaTitle', null],
+      },
+      subCategoryMetaDescription: {
+        $ifNull: ['$categoryDetails.subCategories.metaDescription', null],
+      },
+      isSubCategoryActive: {
+        $ifNull: ['$categoryDetails.subCategories.isActive', false],
+      },
+      subCategoryAccent: {
+        $ifNull: ['$categoryDetails.subCategories.accent', null],
+      },
+
+      // Brand Details:
+      brandId: { $ifNull: ['$brandDeails._id', null] },
+      brandName: { $ifNull: ['$brandDeails.name', null] },
+      brandImage: { $ifNull: ['$brandDeails.image', null] },
+      brandSlug: { $ifNull: ['$brandDeails.slug', null] },
+      brandDescription: { $ifNull: ['$brandDeails.description', null] },
+      isBrandActive: { $ifNull: ['$brandDeails.isActive', false] },
+    },
+  });
+
+  // Sperical  filter for category slug (if slug provided for category or c)
+  if (
+    filterCategory &&
+    isSlug(filterCategory) &&
+    !mongoose.isValidObjectId(filterCategory)
+  ) {
+    pipeline.push({
+      $match: {
+        categorySlug: encodeURI(filterCategory),
+      },
+    });
+  }
+
+  const brandFilter: PipelineStage.Match['$match'] = {
+    $or: [],
+  };
+
+  if (brandIds.length > 0) {
+    brandFilter.$or!.push({
+      brand: {
+        $in: brandIds,
+      },
+    });
+  }
+
+  if (brandTexts.length > 0) {
+    brandFilter.$or!.push(
+      {
+        brandSlug: {
+          $in: brandTexts,
+        },
+      },
+      {
+        brandName: {
+          $in: brandTexts,
+        },
+      },
+    );
+  }
+
+  if (brandFilter.$or!.length > 0) {
+    pipeline.push({
+      $match: brandFilter,
+    });
+  }
+
+  // if include inactive :
+  if (!includeInactive) {
+    pipeline.push({
+      $match: {
+        isSubCategoryActive: true,
+        isCategoryActive: true,
+        isActive: true,
+        isBrandActive: true,
+      },
+    });
+  }
+
+  // if exclude slug:
+  if (excludeSlug) {
+    pipeline.push({
+      $match: {
+        slug: {
+          $ne: encodeURI(excludeSlug),
+        },
+      },
+    });
+  }
+
+  pipeline.push({
+    $project: {
+      brandDeails: 0,
+      categoryDetails: 0,
+    },
+  });
+
+  pipeline.push({
+    $facet: {
+      data: [
+        {
+          $skip: skip,
+        },
+        {
+          $limit: currentLimit,
+        },
+      ],
+      meta: [
+        {
+          $count: 'total',
+        },
+      ],
+    },
+  });
+
+  const result = await ProductModel.aggregate(pipeline);
+
+  const data = result?.[0]?.data;
+  const total = result?.[0]?.meta?.[0]?.total || 0;
+
+  const totalPages = Math.ceil(total / currentLimit) || 1;
+
+  return {
+    data,
+    meta: {
+      page: currentPage,
+      limit: currentLimit,
+      total,
+      totalPages,
+    },
+  };
+};
+
 // 3. getAllActiveProductsFromDB
 const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
   getAllProductsFromDB({ ...query, includeInactive: undefined });
@@ -712,4 +1023,7 @@ export const ProductService = {
   getProductsByCategorySlugFromDB,
   getProductsBySubCategorySlugFromDB,
   searchProducts,
+
+  // New endpoints:
+  getAllProductsFromDBNew,
 };

@@ -2,6 +2,7 @@ import httpStatus from 'http-status';
 import { AppError, asyncHandler, sendResponse } from '../../utils';
 import { ProductService } from './product.service';
 import { getParam } from '../../lib/getParam';
+import { TGetAllProductQueryType } from './product.validation';
 
 // 1. createProduct
 const createProduct = asyncHandler(async (req, res) => {
@@ -17,6 +18,20 @@ const createProduct = asyncHandler(async (req, res) => {
 // 2. getAllProducts
 const getAllProducts = asyncHandler(async (req, res) => {
   const result = await ProductService.getAllProductsFromDB(req.query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    message: 'Products fetched successfully!',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
+// 2.1. Get all products new:
+const getAllProductsNew = asyncHandler(async (req, res) => {
+  const query = req.query as unknown as TGetAllProductQueryType;
+
+  const result = await ProductService.getAllProductsFromDBNew(query);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -155,4 +170,7 @@ export const ProductController = {
   getProductsByCategorySlug,
   getProductsBySubCategorySlug,
   searchProducts,
+
+  // New Apies:
+  getAllProductsNew,
 };
