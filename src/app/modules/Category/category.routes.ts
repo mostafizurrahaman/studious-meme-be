@@ -4,6 +4,7 @@ import {
   auth,
   burstProtection,
   publicLimiter,
+  validateRequest,
   validateRequestFromFormData,
 } from '../../middlewares';
 import { multerUpload } from '../../lib';
@@ -84,5 +85,12 @@ router
     adminLimiter,
     CategoryController.deleteCategorySubCategory,
   );
+
+router.get(
+  '/sub-categories/all',
+  // publicLimiter,
+  validateRequest(CategoryValidation.getAllSubCategories),
+  CategoryController.getAllSubCategories,
+);
 
 export const CategoryRoutes = router;

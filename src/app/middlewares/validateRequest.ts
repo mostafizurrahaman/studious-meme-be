@@ -18,6 +18,7 @@ export const validateRequest = (schema: ZodObject<any, any>) => {
       // Overwrite validated values
       req.body = parsedData.body || req.body;
       req.cookies = parsedData.cookies || req.cookies;
+      req.validateQuery = parsedData.query || req.query;
 
       next();
     },

@@ -422,7 +422,6 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
 };
 
 // 2.1 Get Connection (welcome):
-// 2.1 Get Connection (welcome):
 const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
   const {
     page = 1,

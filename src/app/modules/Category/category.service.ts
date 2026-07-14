@@ -4,6 +4,10 @@ import { deleteImageFromCloudinary, sendImageToCloudinary } from '../../lib';
 import { CategoryModel } from './category.model';
 import { ICategory, ISubCategoryItem } from './category.interface';
 import { MulterFile } from '../../lib/upload';
+import { TGetAllProductQueryType } from '../Product/product.validation';
+import { TGetAllSubCategoriesQueryType } from './category.validation';
+import { PipelineStage, Types } from 'mongoose';
+import { pipe } from 'zod';
 
 // 1. createCategoryIntoDB
 const createCategoryIntoDB = async (
@@ -37,12 +41,11 @@ const getActiveCategoriesFromDB = async () =>
   CategoryModel.find({ isActive: true })
     .sort({ name: 1 })
     .lean()
-    .then((categories) =>
-      categories.map((category) => ({
+    .then(categories =>
+      categories.map(category => ({
         ...category,
         subCategories:
-          category.subCategories?.filter((item) => item.isActive !== false) ??
-          [],
+          category.subCategories?.filter(item => item.isActive !== false) ?? [],
       })),
     );
 
@@ -61,7 +64,7 @@ const getActiveCategoryBySlugFromDB = async (slug: string) => {
   return {
     ...doc,
     subCategories:
-      doc.subCategories?.filter((item) => item.isActive !== false) ?? [],
+      doc.subCategories?.filter(item => item.isActive !== false) ?? [],
   };
 };
 
@@ -165,7 +168,7 @@ const updateCategorySubCategoryIntoDB = async (
   if (!category)
     throw new AppError(httpStatus.NOT_FOUND, 'Category not found!');
   const item = category.subCategories.find(
-    (item) => item.slug === subCategorySlug,
+    item => item.slug === subCategorySlug,
   );
   if (!item) throw new AppError(httpStatus.NOT_FOUND, 'Subcategory not found!');
 
@@ -204,12 +207,233 @@ const deleteCategorySubCategoryFromDB = async (
   if (!category)
     throw new AppError(httpStatus.NOT_FOUND, 'Category not found!');
   const next = category.subCategories.filter(
-    (item) => item.slug !== subCategorySlug,
+    item => item.slug !== subCategorySlug,
   );
   if (next.length === category.subCategories.length)
     throw new AppError(httpStatus.NOT_FOUND, 'Subcategory not found!');
   category.subCategories = next;
   return category.save();
+};
+
+// {
+//             "_id": "69f5dcdb2d242ed60b012d34",
+//             "name": "Cleaning Maintenance",
+//             "slug": "cleaning-maintenance",
+//             "subCategories": {
+//                 "name": "Automotive",
+//                 "slug": "automotive",
+//                 "description": "Find the best automotive tools in Bangladesh, including rickshaw batteries, car washers, tyre changers, floor jacks, bike ramps, and water guns. Buy online now at affordable prices!",
+//                 "isActive": true
+//             },
+//             "description": "Discover the best cleaning & maintenance tools at the best price in Bangladesh. Buy online a wide range of products, including vacuum cleaners, dustbins, cleaning buckets, tubs, automotive cleaning tools, disinfection supplies, fixtures, and plumbing products. Perfect for homes and industries, these tools ensure efficient cleaning and maintenance. Shop now for premium-quality products in BD at affordable prices.",
+//             "isActive": true,
+//             "createdAt": "2026-05-02T11:15:39.331Z",
+//             "updatedAt": "2026-05-02T11:15:39.331Z"
+//         }
+
+const getAllSubCategories = async (query: TGetAllSubCategoriesQueryType) => {
+  const {
+    limit,
+    page,
+    searchTerm,
+    categoryId,
+    categorySlug,
+    sortBy = 'subCategorySlug',
+    sortOrder = 'asc',
+    includeInActive = false,
+  } = query;
+  const currentLimit = limit || 10;
+  const currentPage = page || 1;
+  const skip = (currentPage - 1) * currentLimit;
+
+  const pipeline: PipelineStage[] = [];
+
+  if (categoryId) {
+    pipeline.push({
+      $match: {
+        _id: new Types.ObjectId(categoryId),
+      },
+    });
+  }
+
+  if (categorySlug) {
+    pipeline.push({
+      $match: {
+        slug: encodeURI(categorySlug),
+      },
+    });
+  }
+
+  if (!includeInActive) {
+    pipeline.push({
+      $match: {
+        isActive: true,
+      },
+    });
+  }
+
+  pipeline.push({
+    $unwind: '$subCategories',
+  });
+
+  if (!includeInActive) {
+    pipeline.push({
+      $match: {
+        'subCategories.isActive': true,
+      },
+    });
+  }
+
+  pipeline.push({
+    $lookup: {
+      from: 'products',
+      localField: 'subCategories.slug',
+      foreignField: 'subCategorySlug',
+      as: 'products',
+      pipeline: [
+        {
+          $group: {
+            _id: null,
+            activeProducts: {
+              $sum: {
+                $cond: ['$isActive', 1, 0],
+              },
+            },
+            inActiveProducts: {
+              $sum: {
+                $cond: ['$isActive', 0, 1],
+              },
+            },
+            totalProducts: {
+              $sum: 1,
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  pipeline.push({
+    $addFields: {
+      activeProducts: {
+        $ifNull: [
+          {
+            $first: ['$products.activeProducts'],
+          },
+          0,
+        ],
+      },
+      totalProducts: {
+        $ifNull: [
+          {
+            $first: ['$products.totalProducts'],
+          },
+          0,
+        ],
+      },
+      inActiveProducts: {
+        $ifNull: [
+          {
+            $first: ['$products.inActiveProducts'],
+          },
+          0,
+        ],
+      },
+    },
+  });
+
+  pipeline.push({
+    $project: {
+      _id: 0,
+      subCategorySlug: '$subCategories.slug',
+      subCategoryName: '$subCategories.name',
+      subCategoryDescription: { $ifNull: ['$subCategories.description', null] },
+      subCategoryMetaTile: { $ifNull: ['$subCategories.metaTitle', null] },
+      subCategoryMetaDescription: {
+        $ifNull: ['$subCategories.metaDescription', null],
+      },
+      isSubCategoryActive: { $ifNull: ['$subCategories.isActive', false] },
+      subCategoryImage: { $ifNull: ['$subCategories.image', null] },
+      categoryId: '$_id',
+      categoryName: '$name',
+      categoryDescription: { $ifNull: ['$description', null] },
+      categorySlug: '$slug',
+      categoryMetaTile: { $ifNull: ['$metaTitle', null] },
+      categoryMetaDescription: { $ifNull: ['$metaDescription', null] },
+      isCategoryActive: { $ifNull: ['$isActive', false] },
+      categoryImage: { $ifNull: ['$image', null] },
+      activeProducts: '$activeProducts',
+      inActiveProducts: '$inActiveProducts',
+      totalProducts: '$totalProducts',
+      createdAt: '$subCategories.createdAt',
+      updatedAt: '$subCategories.updatedAt',
+    },
+  });
+
+  const searchableFields = [
+    'subCategorySlug',
+    'subCategoryName',
+    'subCategoryDescription',
+    'categoryName',
+    'categoryDescription',
+    'categorySlug',
+  ];
+
+  if (searchTerm) {
+    pipeline.push({
+      $match: {
+        $or: searchableFields.map(field => ({
+          [field]: {
+            $regex: searchTerm,
+            $options: 'i',
+          },
+        })),
+      },
+    });
+  }
+
+  if (sortBy || sortOrder) {
+    pipeline.push({
+      $sort: {
+        [sortBy]: sortOrder === 'asc' ? 1 : -1,
+      },
+    });
+  }
+
+  pipeline.push({
+    $facet: {
+      data: [
+        {
+          $skip: skip,
+        },
+        {
+          $limit: currentLimit,
+        },
+      ],
+      meta: [
+        {
+          $count: 'total',
+        },
+      ],
+    },
+  });
+
+  const result = await CategoryModel.aggregate(pipeline);
+
+  const data = result?.[0]?.data;
+  const total = result?.[0]?.meta?.[0]?.total || 0;
+
+  const totalPages = Math.ceil(total / currentLimit) || 1;
+
+  return {
+    data,
+    meta: {
+      page: currentPage,
+      limit: currentLimit,
+      total,
+      totalPages,
+    },
+  };
 };
 
 export const CategoryService = {
@@ -223,4 +447,5 @@ export const CategoryService = {
   createCategorySubCategoryIntoDB,
   updateCategorySubCategoryIntoDB,
   deleteCategorySubCategoryFromDB,
+  getAllSubCategories,
 };
