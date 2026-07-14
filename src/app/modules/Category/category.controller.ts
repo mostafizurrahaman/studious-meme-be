@@ -2,6 +2,7 @@ import httpStatus from 'http-status';
 import { AppError, asyncHandler, sendResponse } from '../../utils';
 import { CategoryService } from './category.service';
 import { getParam } from '../../lib/getParam';
+import { TGetAllSubCategoriesQueryType } from './category.validation';
 
 // 1. createCategory
 const createCategory = asyncHandler(async (req, res) => {
@@ -145,6 +146,18 @@ const deleteCategorySubCategory = asyncHandler(async (req, res) => {
   });
 });
 
+const getAllSubCategories = asyncHandler(async (req, res) => {
+  const query = req.validateQuery as unknown as TGetAllSubCategoriesQueryType;
+  const result = await CategoryService.getAllSubCategories(query);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    message: 'Subcategories retrieved successfully!',
+    data: result.data,
+    meta: result.meta,
+  });
+});
+
 export const CategoryController = {
   createCategory,
   getAllCategories,
@@ -156,4 +169,5 @@ export const CategoryController = {
   createCategorySubCategory,
   updateCategorySubCategory,
   deleteCategorySubCategory,
+  getAllSubCategories,
 };

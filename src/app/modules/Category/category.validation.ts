@@ -61,6 +61,77 @@ const categoryBaseSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+const subCategoriesSortingFields = [
+  'subCategorySlug',
+  'subCategoryName',
+  'totalProducts',
+  'inActiveProducts',
+  'activeProducts',
+];
+
+const getAllSubCategories = z.object({
+  query: z
+    .object({
+      page: z
+        .number({
+          error: 'Page is required',
+        })
+        .min(1, {
+          error: 'Page should be positive number!',
+        })
+        .optional()
+        .default(1),
+      limit: z
+        .number({
+          error: 'Limit is required',
+        })
+        .min(1, {
+          error: 'Limit should be positive number!',
+        })
+        .optional()
+        .default(1),
+      searchTerm: z
+        .string({ error: 'SearchTerm slug is required!' })
+        .optional(),
+      sortBy: z
+        .enum(subCategoriesSortingFields, {
+          error: `Sort By will be ${subCategoriesSortingFields.join(',')}`,
+        })
+        .optional(),
+      sortOrder: z
+        .enum(['asc', 'desc'], {
+          error: `Sort By will be asc,desc`,
+        })
+        .optional(),
+      categoryId: z
+        .string({
+          error: 'CategoryId should be string',
+        })
+        .optional(),
+      categorySlug: z
+        .string({
+          error: 'CategoryId should be string',
+        })
+        .optional(),
+      includeInActive: z.coerce
+        .boolean({
+          error: 'Included inactive should be boolean!',
+        })
+        .transform(val => Boolean(val))
+        .default(false)
+        .optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (data.categoryId && data.categorySlug) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Provide only one of these two fields: 'categoryId' or 'categorySlug'.`,
+          path: ['categorySlug'],
+        });
+      }
+    }),
+});
+
 export const CategoryValidation = {
   categoryCreateSchema: z.object({ body: categoryBaseSchema }),
   categoryUpdateSchema: z.object({
@@ -98,4 +169,9 @@ export const CategoryValidation = {
       description: categorySubCategorySchema.shape.description,
     }),
   }),
+  getAllSubCategories,
 };
+
+export type TGetAllSubCategoriesQueryType = z.infer<
+  typeof getAllSubCategories.shape.query
+>;
