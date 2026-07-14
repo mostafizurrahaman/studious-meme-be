@@ -4,6 +4,7 @@ import {
   auth,
   burstProtection,
   publicLimiter,
+  validateRequest,
   validateRequestFromFormData,
 } from '../../middlewares';
 import { multerUpload } from '../../lib';
@@ -25,6 +26,13 @@ router
     ProductController.createProduct,
   )
   .get(publicLimiter, ProductController.getAllProducts);
+
+router.get(
+  '/all',
+  publicLimiter,
+  validateRequest(ProductValidation.getProductsQueryValidationSchema),
+  ProductController.getAllProductsNew,
+);
 
 // 2. public active product list/detail
 router
