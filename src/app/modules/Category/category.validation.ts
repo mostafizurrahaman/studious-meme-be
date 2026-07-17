@@ -72,7 +72,7 @@ const subCategoriesSortingFields = [
 const getAllSubCategories = z.object({
   query: z
     .object({
-      page: z
+      page: z.coerce
         .number({
           error: 'Page is required',
         })
@@ -81,7 +81,7 @@ const getAllSubCategories = z.object({
         })
         .optional()
         .default(1),
-      limit: z
+      limit: z.coerce
         .number({
           error: 'Limit is required',
         })
@@ -89,7 +89,7 @@ const getAllSubCategories = z.object({
           error: 'Limit should be positive number!',
         })
         .optional()
-        .default(1),
+        .default(10),
       searchTerm: z
         .string({ error: 'SearchTerm slug is required!' })
         .optional(),
