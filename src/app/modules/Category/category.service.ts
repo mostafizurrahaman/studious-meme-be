@@ -4,10 +4,9 @@ import { deleteImageFromCloudinary, sendImageToCloudinary } from '../../lib';
 import { CategoryModel } from './category.model';
 import { ICategory, ISubCategoryItem } from './category.interface';
 import { MulterFile } from '../../lib/upload';
-import { TGetAllProductQueryType } from '../Product/product.validation';
+
 import { TGetAllSubCategoriesQueryType } from './category.validation';
 import { PipelineStage, Types } from 'mongoose';
-import { pipe } from 'zod';
 
 // 1. createCategoryIntoDB
 const createCategoryIntoDB = async (
@@ -436,6 +435,55 @@ const getAllSubCategories = async (query: TGetAllSubCategoriesQueryType) => {
   };
 };
 
+const getSubCategoryBySlug = async (slug: string) => {
+  const pipeline: PipelineStage[] = [];
+
+  pipeline.push({
+    $unwind: {
+      path: '$subCategories',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  pipeline.push({
+    $project: {
+      _id: 0,
+      subCategoryName: { $ifNull: ['$subCategories.name', null] },
+      subCategorySlug: { $ifNull: ['$subCategories.slug', null] },
+      subCategoryDescription: { $ifNull: ['$subCategories.description', null] },
+      subCategoryIsActive: { $ifNull: ['$subCategories.isActive', false] },
+      subCategoryMetaTitle: { $ifNull: ['$subCategories.metaTitle', null] },
+      subCategoryImage: { $ifNull: ['$subCategories.image', null] },
+      subCategoryMetaDescription: {
+        $ifNull: ['$subCategories.metaDescription', null],
+      },
+
+      categoryId: { $ifNull: ['$_id', null] },
+      categorySlug: { $ifNull: ['$slug', null] },
+      categoryName: { $ifNull: ['$name', null] },
+      categoryDescription: { $ifNull: ['$description', null] },
+      categoryMetaTitle: { $ifNull: ['$metaTitle', null] },
+      categoryMetaDescription: { $ifNull: ['$metaDescription', null] },
+      categoryImage: { $ifNull: ['$image', null] },
+      categoryIsActive: { $ifNull: ['$isActive', false] },
+    },
+  });
+
+  pipeline.push({
+    $match: {
+      subCategorySlug: encodeURI(slug),
+    },
+  });
+
+  const subcategory = await CategoryModel.aggregate(pipeline);
+
+  if (!subcategory[0]) {
+    throw new AppError(httpStatus.NOT_FOUND);
+  }
+
+  return subcategory[0];
+};
+
 export const CategoryService = {
   createCategoryIntoDB,
   getAllCategoriesFromDB,
@@ -448,4 +496,5 @@ export const CategoryService = {
   updateCategorySubCategoryIntoDB,
   deleteCategorySubCategoryFromDB,
   getAllSubCategories,
+  getSubCategoryBySlug,
 };

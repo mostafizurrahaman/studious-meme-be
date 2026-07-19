@@ -132,6 +132,14 @@ const getAllSubCategories = z.object({
     }),
 });
 
+const getSubcategoryBySlug = z.object({
+  params: z.object({
+    slug: z.string({
+      error: 'Slug is required!',
+    }),
+  }),
+});
+
 export const CategoryValidation = {
   categoryCreateSchema: z.object({ body: categoryBaseSchema }),
   categoryUpdateSchema: z.object({
@@ -170,6 +178,7 @@ export const CategoryValidation = {
     }),
   }),
   getAllSubCategories,
+  getSubcategoryBySlug,
 };
 
 export type TGetAllSubCategoriesQueryType = z.infer<
