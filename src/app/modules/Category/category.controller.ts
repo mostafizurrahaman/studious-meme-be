@@ -157,6 +157,16 @@ const getAllSubCategories = asyncHandler(async (req, res) => {
     meta: result.meta,
   });
 });
+const getSubCategoryBySlug = asyncHandler(async (req, res) => {
+  const slug = getParam(req.params.slug);
+  const result = await CategoryService.getSubCategoryBySlug(slug);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    message: 'Sub category retrieved successfully!',
+    data: result,
+  });
+});
 
 export const CategoryController = {
   createCategory,
@@ -170,4 +180,5 @@ export const CategoryController = {
   updateCategorySubCategory,
   deleteCategorySubCategory,
   getAllSubCategories,
+  getSubCategoryBySlug,
 };

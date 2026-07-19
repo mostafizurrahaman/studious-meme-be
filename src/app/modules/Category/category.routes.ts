@@ -88,9 +88,16 @@ router
 
 router.get(
   '/sub-categories/all',
-  // publicLimiter,
+  publicLimiter,
   validateRequest(CategoryValidation.getAllSubCategories),
   CategoryController.getAllSubCategories,
+);
+
+router.get(
+  '/sub-categories/:slug',
+  publicLimiter,
+  validateRequest(CategoryValidation.getSubcategoryBySlug),
+  CategoryController.getSubCategoryBySlug,
 );
 
 export const CategoryRoutes = router;
