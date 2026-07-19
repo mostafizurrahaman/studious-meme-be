@@ -48,6 +48,9 @@ const userSchema = new Schema<IUser, IUserModel>(
       type: String,
       required: true,
     },
+    lastOtpSent: {
+      type: Date,
+    },
 
     otpExpiry: {
       type: Date,
