@@ -14,6 +14,7 @@ export interface IUser extends Document {
 
   otp: string;
   otpExpiry: Date;
+  lastOtpSent: Date;
   isVerifiedByOTP: boolean;
 
   role: TRole;
