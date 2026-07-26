@@ -1055,7 +1055,7 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
     return { products: [], suggestions: [] };
   }
 
-  // const term = searchTerm.trim().toLowerCase();
+  const terms = searchTerm.trim().split(/\s+/).filter(Boolean);
 
   const searchableFields = [
     'title',
@@ -1152,13 +1152,25 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
         brandSlug: '$brandDetails.slug',
       },
     },
+    // {
+    //   $match: {
+    //     $or: searchableFields.map(field => ({
+    //       [field]: {
+    //         $regex: searchTerm,
+    //         $options: 'i',
+    //       },
+    //     })),
+    //   },
+    // },
     {
       $match: {
-        $or: searchableFields.map(field => ({
-          [field]: {
-            $regex: searchTerm,
-            $options: 'i',
-          },
+        $and: terms.map(term => ({
+          $or: searchableFields.map(field => ({
+            [field]: {
+              $regex: term,
+              $options: 'i',
+            },
+          })),
         })),
       },
     },
