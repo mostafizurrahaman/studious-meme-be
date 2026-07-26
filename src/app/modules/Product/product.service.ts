@@ -1055,26 +1055,85 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
     return { products: [], suggestions: [] };
   }
 
-  const term = searchTerm.trim().toLowerCase();
-  const regex = new RegExp(term, 'i');
+  // const term = searchTerm.trim().toLowerCase();
 
-  // Search across multiple fields
-  const products = await ProductModel.aggregate([
+  const searchableFields = [
+    'title',
+    'slug',
+    'sku',
+    'features',
+    'description',
+    'badge',
+    'brandSlug',
+    'brandName',
+    'categoryName',
+    'categorySlug',
+    'subCategoryName',
+    'subCategorySlug',
+  ];
+
+  // const regex = new RegExp(term, 'i');
+
+  const searchPipeline: PipelineStage[] = [];
+
+  const suggestionPipeline: PipelineStage[] = [];
+
+  const lookupPipe: PipelineStage[] = [
     {
       $match: {
         isActive: true,
-        $or: [
-          { title: regex },
-          { slug: regex },
-          { sku: regex },
-          { features: regex },
-          { description: regex },
-          { badge: regex },
+      },
+    },
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'brand',
+        foreignField: '_id',
+        as: 'brandDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryDetails',
+        let: {
+          subCategorySlug: '$subCategorySlug',
+        },
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              name: 1,
+              slug: 1,
+              subCategory: {
+                $first: {
+                  $filter: {
+                    input: '$subCategories',
+                    as: 'sub',
+                    cond: {
+                      $eq: ['$$sub.slug', '$$subCategorySlug'],
+                    },
+                  },
+                },
+              },
+            },
+          },
         ],
       },
     },
     {
-      $limit: limit,
+      $unwind: {
+        path: '$categoryDetails',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $unwind: {
+        path: '$brandDetails',
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $project: {
@@ -1085,36 +1144,56 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
         images: 1,
         badge: 1,
         sellingUnit: 1,
-        _id: 0,
+        categoryName: '$categoryDetails.name',
+        categorySlug: '$categoryDetails.slug',
+        subCategoryName: '$categoryDetails.subCategory.name',
+        subCategorySlug: '$categoryDetails.subCategory.slug',
+        brandName: '$brandDetails.name',
+        brandSlug: '$brandDetails.slug',
       },
     },
-  ]);
-
-  // Get unique title suggestions using aggregation
-  const suggestions = await ProductModel.aggregate([
     {
       $match: {
-        isActive: true,
-        $or: [{ title: regex }, { slug: regex }, { sku: regex }],
+        $or: searchableFields.map(field => ({
+          [field]: {
+            $regex: searchTerm,
+            $options: 'i',
+          },
+        })),
       },
     },
-    {
-      $group: {
-        _id: '$title',
-        slug: { $first: '$slug' },
-      },
+  ];
+
+  searchPipeline.push(...lookupPipe);
+  suggestionPipeline.push(...lookupPipe);
+
+  suggestionPipeline.push({
+    $group: {
+      _id: '$title',
+      slug: { $first: '$slug' },
     },
-    {
-      $limit: limit,
+  });
+
+  searchPipeline.push({
+    $limit: limit,
+  });
+  suggestionPipeline.push({
+    $limit: limit,
+  });
+
+  suggestionPipeline.push({
+    $project: {
+      _id: 0,
+      title: '$_id',
+      slug: 1,
     },
-    {
-      $project: {
-        _id: 0,
-        title: '$_id',
-        slug: 1,
-      },
-    },
-  ]);
+  });
+
+  // Search across multiple fields
+  const products = await ProductModel.aggregate(searchPipeline);
+
+  // Get unique title suggestions using aggregation
+  const suggestions = await ProductModel.aggregate(suggestionPipeline);
 
   return { products, suggestions };
 };
