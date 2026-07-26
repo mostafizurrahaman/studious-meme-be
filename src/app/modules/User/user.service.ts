@@ -343,6 +343,10 @@ const updateProfileDataIntoDB = async (
     dob: Date;
   },
 ) => {
+  console.log({
+    userData,
+  });
+
   const user = await UserModel.findByIdAndUpdate(userData._id, payload, {
     returnDocument: 'after',
   });

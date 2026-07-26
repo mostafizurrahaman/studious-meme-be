@@ -68,7 +68,7 @@ const updateProfilePhoto = asyncHandler(async (req, res) => {
 
 // 6. updateProfileData
 const updateProfileData = asyncHandler(async (req, res) => {
-  const result = await UserService.updateProfileDataIntoDB(req.body, req.user);
+  const result = await UserService.updateProfileDataIntoDB(req.user, req.body);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
