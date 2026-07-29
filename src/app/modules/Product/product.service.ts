@@ -486,6 +486,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
 
   // Parse helper values
   const searchTermValue = getString(searchTerm);
+
   const priceValue = getString(price || p);
   const stockValue = getString(stock);
   const tagValue = getString(tag);
@@ -742,23 +743,26 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
   // 4. Search term filter (Early Match)
   if (searchTermValue) {
     const escapedSearch = escapeRegExp(searchTermValue);
+    const terms = escapedSearch.trim().split(/\s+/).filter(Boolean);
     pipeline.push({
       $match: {
-        $or: [
-          'title',
-          'sku',
-          'slug',
-          'badge',
-          'features',
-          'description',
-          'brandName',
-          'brandSlug',
-          'subCategoryDescription',
-          'subCategorySlug',
-          'categorySlug',
-          'categoryName',
-        ].map(field => ({
-          [field]: { $regex: escapedSearch, $options: 'i' },
+        $and: terms.map(term => ({
+          $or: [
+            'title',
+            'sku',
+            'slug',
+            'badge',
+            'features',
+            'description',
+            'brandName',
+            'brandSlug',
+            'subCategoryDescription',
+            'subCategorySlug',
+            'categorySlug',
+            'categoryName',
+          ].map(field => ({
+            [field]: { $regex: term, $options: 'i' },
+          })),
         })),
       },
     });
