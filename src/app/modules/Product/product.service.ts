@@ -18,6 +18,41 @@ type ProductSort = Record<string, 1 | -1>;
 const DEFAULT_PRODUCTS_LIMIT = 100;
 const MAX_PRODUCT_IMAGES = 5;
 
+const PRODUCT_SEARCH_FIELDS = [
+  { path: 'title', weight: 10 },
+  { path: 'features', weight: 9 },
+  { path: 'brandName', weight: 8 },
+  { path: 'categoryName', weight: 7 },
+  { path: 'sku', weight: 6 },
+  { path: 'badge', weight: 5 },
+  { path: 'slug', weight: 4 },
+  { path: 'description', weight: 3 },
+  { path: 'subCategoryDescription', weight: 2 },
+  { path: 'subCategorySlug', weight: 2 },
+  { path: 'categorySlug', weight: 2 },
+  { path: 'brandSlug', weight: 1 },
+] as const;
+
+export const buildProductSearchStage = (search: string) => ({
+  $search: {
+    index: 'products',
+    compound: {
+      should: PRODUCT_SEARCH_FIELDS.map(({ path, weight }) => ({
+        text: {
+          query: search,
+          path,
+          score: {
+            boost: {
+              value: weight,
+            },
+          },
+        },
+      })),
+      minimumShouldMatch: 1,
+    },
+  },
+});
+
 const normalizeSlug = (value: string) =>
   value
     .normalize('NFKD')
@@ -451,6 +486,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
 
   // Parse helper values
   const searchTermValue = getString(searchTerm);
+
   const priceValue = getString(price || p);
   const stockValue = getString(stock);
   const tagValue = getString(tag);
@@ -707,23 +743,26 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
   // 4. Search term filter (Early Match)
   if (searchTermValue) {
     const escapedSearch = escapeRegExp(searchTermValue);
+    const terms = escapedSearch.trim().split(/\s+/).filter(Boolean);
     pipeline.push({
       $match: {
-        $or: [
-          'title',
-          'sku',
-          'slug',
-          'badge',
-          'features',
-          'description',
-          'brandName',
-          'brandSlug',
-          'subCategoryDescription',
-          'subCategorySlug',
-          'categorySlug',
-          'categoryName',
-        ].map(field => ({
-          [field]: { $regex: escapedSearch, $options: 'i' },
+        $and: terms.map(term => ({
+          $or: [
+            'title',
+            'sku',
+            'slug',
+            'badge',
+            'features',
+            'description',
+            'brandName',
+            'brandSlug',
+            'subCategoryDescription',
+            'subCategorySlug',
+            'categorySlug',
+            'categoryName',
+          ].map(field => ({
+            [field]: { $regex: term, $options: 'i' },
+          })),
         })),
       },
     });
@@ -868,8 +907,13 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
   };
 };
 // 3. getAllActiveProductsFromDB
+// const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
+//   getAllProductsFromDB({ ...query, includeInactive: undefined });
 const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
-  getAllProductsFromDB({ ...query, includeInactive: undefined });
+  getAllProductsFromDBNew({
+    ...query,
+    includeInactive: undefined,
+  });
 
 // 4. getProductBySlugFromDB
 const getProductBySlugFromDB = async (slug: string) => {
