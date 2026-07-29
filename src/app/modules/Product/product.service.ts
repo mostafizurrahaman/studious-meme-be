@@ -816,6 +816,13 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     $sort: sortStage,
   });
 
+  pipeline.push({
+    $addFields: {
+      brand: '$brandDetails',
+      category: '$categoryDetails',
+    },
+  });
+
   // Cleanup reference raw lookups
   pipeline.push({
     $project: {
@@ -1056,6 +1063,7 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
   }
 
   const terms = searchTerm.trim().split(/\s+/).filter(Boolean);
+  console.log(terms);
 
   const searchableFields = [
     'title',
