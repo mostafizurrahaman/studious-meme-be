@@ -43,6 +43,7 @@ const getAllProductsNew = asyncHandler(async (req, res) => {
 
 // 3. getAllActiveProducts
 const getAllActiveProducts = asyncHandler(async (req, res) => {
+  console.log({  query: req.query})
   const result = await ProductService.getAllActiveProductsFromDB(req.query);
 
   sendResponse(res, {
