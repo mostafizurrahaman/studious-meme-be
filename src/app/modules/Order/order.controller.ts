@@ -20,7 +20,11 @@ const previewCheckout = asyncHandler(async (req, res) => {
 
 // 2. createOrder
 const createOrder = asyncHandler(async (req, res) => {
+  console.log(req.body);
+
   const order = await OrderService.createOrderIntoDB(req.user, req.body);
+
+  console.log(order);
 
   if (req.body.paymentMethod === 'PORTPOS') {
     const payment = await PaymentService.initiatePortPosPayment(
