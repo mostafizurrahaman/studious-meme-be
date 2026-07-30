@@ -12,6 +12,7 @@ import { errorLogger } from '../middlewares/logger';
 
 // global error handling middleware (four parameters error handler)
 const globalErrorHandler: ErrorRequestHandler = (err, req, res, _next) => {
+  console.log(err);
   // settle default values
   let statusCode: number = httpStatus.INTERNAL_SERVER_ERROR;
   let message = 'Something went wrong!';
