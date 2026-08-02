@@ -88,6 +88,9 @@ import app from './app';
 import config from './app/config';
 import seedSuperAdmin from './app/seed';
 import colors from 'colors';
+import dns from 'node:dns';
+
+dns.setServers(['1.1.1.1']);
 
 let server: Server | null = null;
 
