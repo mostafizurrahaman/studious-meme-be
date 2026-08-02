@@ -120,6 +120,13 @@ const getAllSubCategories = z.object({
         .transform(val => Boolean(val))
         .default(false)
         .optional(),
+      skipLimitAndPagination: z.coerce
+        .boolean({
+          error: 'Skip limit and pagination',
+        })
+        .transform(val => Boolean(val))
+        .default(false)
+        .optional(),
     })
     .superRefine((data, ctx) => {
       if (data.categoryId && data.categorySlug) {

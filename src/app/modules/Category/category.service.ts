@@ -240,6 +240,7 @@ const getAllSubCategories = async (query: TGetAllSubCategoriesQueryType) => {
     sortBy = 'subCategorySlug',
     sortOrder = 'asc',
     includeInActive = false,
+    skipLimitAndPagination = false,
   } = query;
   const currentLimit = limit || 10;
   const currentPage = page || 1;
@@ -399,16 +400,27 @@ const getAllSubCategories = async (query: TGetAllSubCategoriesQueryType) => {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const paginationStage: any = [
+    {
+      $match: {},
+    },
+  ];
+
+  if (!skipLimitAndPagination) {
+    paginationStage.push(
+      {
+        $skip: skip,
+      },
+      {
+        $limit: currentLimit,
+      },
+    );
+  }
+
   pipeline.push({
     $facet: {
-      data: [
-        {
-          $skip: skip,
-        },
-        {
-          $limit: currentLimit,
-        },
-      ],
+      data: paginationStage,
       meta: [
         {
           $count: 'total',
