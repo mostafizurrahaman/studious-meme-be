@@ -24,8 +24,6 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const order = await OrderService.createOrderIntoDB(req.user, req.body);
 
-  console.log(order);
-
   if (req.body.paymentMethod === 'PORTPOS') {
     const payment = await PaymentService.initiatePortPosPayment(
       req.user,
