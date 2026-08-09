@@ -47,10 +47,10 @@ const getConfirmationCopy = (
         subject: 'Payment confirmed',
       }
     : {
-        title: 'Order confirmed',
+        title: 'Order placed',
         subtitle:
           'We received your order successfully. Our team will process it shortly.',
-        subject: 'Order confirmed',
+        subject: 'Order placed',
       };
 
 const sendOrderConfirmationEmail = async (
@@ -213,7 +213,7 @@ const sendOrderConfirmationEmail = async (
             <tbody>
               ${payload.items
                 .map(
-                  (item) => `
+                  item => `
                     <tr>
                       <td>
                         <div><strong>${item.title}</strong></div>
