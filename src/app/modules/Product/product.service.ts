@@ -478,232 +478,217 @@ export const getAllProductsFromDBNew = async (
     tag,
   } = query;
 
-  console.log(query);
-
-  // Limit and pagination
   const currentPage = toPositiveNumber(page, 1);
   const currentLimit = toPositiveNumber(limit, 10);
   const skip = (currentPage - 1) * currentLimit;
 
-  const pipeline: PipelineStage[] = [];
-
-  // Parse helper values
-  const searchTermValue = getString(searchTerm);
-  const priceValue = getString(price || p);
-  const stockValue = getString(stock);
-  const tagValue = getString(tag);
-
-  // 1. Exclude slug filter (Early Match)
-  if (excludeSlug) {
-    pipeline.push({
-      $match: {
-        slug: {
-          $ne: encodeURI(excludeSlug),
-        },
-      },
-    });
-  }
-
-  // 2. Category & Brand filter parsing
+  // ---------------------------------------------------------
+  // 1. Pre-fetch Category & Brand IDs (মেমোরি লোড কমানোর জন্য)
+  // ---------------------------------------------------------
   const filterCategory = getString(category || c);
-  const filterSubCategory = getString(subCategory || subCategorySlug);
   const filterBrands =
     getString(brand || b)
       ?.split(',')
       ?.map(v => decodeURIComponent(v.trim()))
       .filter(Boolean) ?? [];
 
-  const brandIds = filterBrands
+  let categoryIdMatch: Types.ObjectId | null = null;
+  if (filterCategory) {
+    if (mongoose.isValidObjectId(filterCategory)) {
+      categoryIdMatch = new Types.ObjectId(filterCategory);
+    } else if (typeof isSlug === 'function' && isSlug(filterCategory)) {
+      const matchedCategory = await CategoryModel.findOne({
+        slug: encodeURI(filterCategory),
+      })
+        .select('_id')
+        .lean();
+      if (matchedCategory) {
+        categoryIdMatch = matchedCategory._id as Types.ObjectId;
+      }
+    }
+  }
+
+  const brandObjectIds = filterBrands
     .filter(v => mongoose.isValidObjectId(v))
     .map(v => new Types.ObjectId(v));
-
   const brandTexts = filterBrands.filter(v => !mongoose.isValidObjectId(v));
 
-  if (filterCategory && mongoose.isValidObjectId(filterCategory)) {
-    pipeline.push({
-      $match: {
-        category: new Types.ObjectId(filterCategory),
-      },
-    });
+  if (brandTexts.length > 0) {
+    const matchedBrands = await BrandModel.find({
+      $or: [{ slug: { $in: brandTexts } }, { name: { $in: brandTexts } }],
+    })
+      .select('_id')
+      .lean();
+    matchedBrands.forEach(b => brandObjectIds.push(b._id as Types.ObjectId));
   }
 
-  // 3. Subcategory slug filter (Early Match)
+  // ---------------------------------------------------------
+  // 2. Build Early $match Conditions (সরাসরি Product কালেকশনে)
+  // ---------------------------------------------------------
+  const matchConditions: Record<string, any> = {};
+
+  if (excludeSlug) {
+    matchConditions.slug = { $ne: encodeURI(excludeSlug) };
+  }
+
+  if (categoryIdMatch) {
+    matchConditions.category = categoryIdMatch;
+  }
+
+  const filterSubCategory = getString(subCategory || subCategorySlug);
   if (filterSubCategory) {
-    pipeline.push({
-      $match: {
-        subCategorySlug: filterSubCategory,
-      },
-    });
+    matchConditions.subCategorySlug = filterSubCategory;
   }
 
-  // 4. Price filter (Early Match)
+  if (brandObjectIds.length > 0) {
+    matchConditions.brand = { $in: brandObjectIds };
+  }
+
+  // Price Filter
+  const priceValue = getString(price || p);
   if (priceValue) {
     let priceQuery: Record<string, any> = {};
-    if (priceValue === 'under-10000') {
-      priceQuery = { $lt: 10000 };
-    } else if (priceValue === '10000-50000') {
+    if (priceValue === 'under-10000') priceQuery = { $lt: 10000 };
+    else if (priceValue === '10000-50000')
       priceQuery = { $gte: 10000, $lt: 50000 };
-    } else if (priceValue === '50000-plus') {
-      priceQuery = { $gte: 50000 };
-    } else {
+    else if (priceValue === '50000-plus') priceQuery = { $gte: 50000 };
+    else {
       const customRange = parseCustomPriceRange(priceValue);
       if (customRange) {
         if (customRange.min !== undefined) priceQuery.$gte = customRange.min;
         if (customRange.max !== undefined) priceQuery.$lte = customRange.max;
       }
     }
-
-    if (Object.keys(priceQuery).length > 0) {
-      pipeline.push({
-        $match: {
-          price: priceQuery,
-        },
-      });
-    }
+    if (Object.keys(priceQuery).length > 0) matchConditions.price = priceQuery;
   }
 
-  // 5. Stock & Tag filters (Early Match)
+  // Stock & Tag Filter
+  const stockValue = getString(stock);
+  const tagValue = getString(tag);
+
   if (stockValue === 'in-stock') {
-    pipeline.push({
-      $match: {
-        $or: [
-          { stock: { $gt: 0 } },
-          { stock: { $exists: false } },
-          { stock: null },
-        ],
-      },
-    });
+    matchConditions.$or = [
+      { stock: { $gt: 0 } },
+      { stock: { $exists: false } },
+      { stock: null },
+    ];
   }
 
   if (stockValue === 'featured' || tagValue === 'featured') {
-    pipeline.push({
-      $match: {
-        $or: [
-          { isFeatured: true },
-          { badge: { $regex: 'featured', $options: 'i' } },
-        ],
-      },
-    });
+    matchConditions.isFeatured = true;
   }
 
   if (stockValue === 'sale' || tagValue === 'sale') {
-    pipeline.push({
-      $match: {
-        $or: [
-          { oldPrice: { $exists: true, $ne: null } },
-          { badge: { $regex: 'sale|%', $options: 'i' } },
-        ],
-      },
-    });
+    matchConditions.oldPrice = { $exists: true, $ne: null };
   }
 
-  if (tagValue === 'latest') {
-    pipeline.push({
-      $match: {
-        $or: [{ badge: { $exists: false } }, { badge: { $not: /old/i } }],
-      },
-    });
+  if (!includeInactive) {
+    matchConditions.isActive = true;
   }
 
-  // 6. Lookup Category Details
-  pipeline.push({
-    $lookup: {
-      from: 'categories',
-      let: {
-        categoryId: '$category',
-        productSubCategorySlug: '$subCategorySlug',
-      },
-      as: 'categoryDetails',
-      pipeline: [
-        {
-          $match: {
-            $expr: {
-              $eq: ['$_id', '$$categoryId'],
-            },
-          },
+  // Search Filter
+  const searchTermValue = getString(searchTerm);
+  if (searchTermValue) {
+    const escapedSearch = escapeRegExp(searchTermValue);
+    const terms = escapedSearch.trim().split(/\s+/).filter(Boolean);
+    matchConditions.$and = terms.map(term => ({
+      $or: [
+        { title: { $regex: term, $options: 'i' } },
+        { sku: { $regex: term, $options: 'i' } },
+        { slug: { $regex: term, $options: 'i' } },
+        { badge: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } },
+      ],
+    }));
+  }
+
+  const pipeline: PipelineStage[] = [];
+
+  // 1. $match stage
+  if (Object.keys(matchConditions).length > 0) {
+    pipeline.push({ $match: matchConditions });
+  }
+
+  // 2. Early $sort stage (Product কালেকশনের Index ব্যবহার করবে)
+  const sortValue = getString(sort);
+  let sortStage: Record<string, 1 | -1> = { createdAt: -1, _id: -1 };
+  if (sortValue === 'price-asc')
+    sortStage = { price: 1, createdAt: -1, _id: -1 };
+  else if (sortValue === 'price-desc')
+    sortStage = { price: -1, createdAt: -1, _id: -1 };
+  else if (sortValue === 'oldest') sortStage = { createdAt: 1, _id: 1 };
+
+  pipeline.push({ $sort: sortStage });
+
+  // 3. $lookup & $unwind (ফিল্টার ও শর্টিং হওয়ার পর ডাটা সাইজ ছোট থাকলে lookup হবে)
+  pipeline.push(
+    {
+      $lookup: {
+        from: 'categories',
+        let: {
+          categoryId: '$category',
+          productSubCategorySlug: '$subCategorySlug',
         },
-        {
-          $project: {
-            name: 1,
-            image: 1,
-            slug: 1,
-            accent: 1,
-            description: 1,
-            metaTitle: 1,
-            metaDescription: 1,
-            isActive: true,
-            subCategories: {
-              $filter: {
-                input: '$subCategories',
-                as: 'subCategory',
-                cond: {
-                  $eq: ['$$subCategory.slug', '$$productSubCategorySlug'],
+        as: 'categoryDetails',
+        pipeline: [
+          { $match: { $expr: { $eq: ['$_id', '$$categoryId'] } } },
+          {
+            $project: {
+              name: 1,
+              image: 1,
+              slug: 1,
+              accent: 1,
+              description: 1,
+              metaTitle: 1,
+              metaDescription: 1,
+              isActive: 1,
+              subCategories: {
+                $filter: {
+                  input: '$subCategories',
+                  as: 'subCategory',
+                  cond: {
+                    $eq: ['$$subCategory.slug', '$$productSubCategorySlug'],
+                  },
                 },
               },
             },
           },
-        },
-      ],
+        ],
+      },
     },
-  });
-
-  // 7. Lookup Brand Details
-  pipeline.push({
-    $lookup: {
-      from: 'brands',
-      localField: 'brand',
-      foreignField: '_id',
-      as: 'brandDetails',
+    {
+      $lookup: {
+        from: 'brands',
+        localField: 'brand',
+        foreignField: '_id',
+        as: 'brandDetails',
+      },
     },
-  });
-
-  // 8. Unwind Looked-up Collections
-  pipeline.push({
-    $unwind: {
-      path: '$categoryDetails',
-      preserveNullAndEmptyArrays: true,
+    { $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: '$categoryDetails.subCategories',
+        preserveNullAndEmptyArrays: true,
+      },
     },
-  });
+    { $unwind: { path: '$brandDetails', preserveNullAndEmptyArrays: true } },
+  );
 
-  pipeline.push({
-    $unwind: {
-      path: '$categoryDetails.subCategories',
-      preserveNullAndEmptyArrays: true,
-    },
-  });
-
-  pipeline.push({
-    $unwind: {
-      path: '$brandDetails',
-      preserveNullAndEmptyArrays: true,
-    },
-  });
-
-  // 9. Final Projection & Computed Fields
+  // 4. Transform & Add Computed Fields
   pipeline.push({
     $addFields: {
-      // Category Fields
       categoryId: { $ifNull: ['$categoryDetails._id', null] },
       categoryName: { $ifNull: ['$categoryDetails.name', null] },
       categorySlug: { $ifNull: ['$categoryDetails.slug', null] },
       categoryImage: { $ifNull: ['$categoryDetails.image', null] },
-      categoryDescription: {
-        $ifNull: ['$categoryDetails.description', null],
-      },
-      categoryMetaTitle: {
-        $ifNull: ['$categoryDetails.metaTitle', null],
-      },
+      categoryDescription: { $ifNull: ['$categoryDetails.description', null] },
+      categoryMetaTitle: { $ifNull: ['$categoryDetails.metaTitle', null] },
       categoryMetaDescription: {
         $ifNull: ['$categoryDetails.metaDescription', null],
       },
-      isCategoryActive: {
-        $ifNull: ['$categoryDetails.isActive', false],
-      },
-      categoryAccent: {
-        $ifNull: ['$categoryDetails.accent', null],
-      },
+      isCategoryActive: { $ifNull: ['$categoryDetails.isActive', false] },
+      categoryAccent: { $ifNull: ['$categoryDetails.accent', null] },
 
-      // Subcategory Fields
       subCategoryName: {
         $ifNull: ['$categoryDetails.subCategories.name', null],
       },
@@ -733,140 +718,18 @@ export const getAllProductsFromDBNew = async (
         $ifNull: ['$categoryDetails.subCategories.accent', null],
       },
 
-      // Brand Details
       brandId: { $ifNull: ['$brandDetails._id', null] },
       brandName: { $ifNull: ['$brandDetails.name', null] },
       brandImage: { $ifNull: ['$brandDetails.image', null] },
       brandSlug: { $ifNull: ['$brandDetails.slug', null] },
       brandDescription: { $ifNull: ['$brandDetails.description', null] },
       isBrandActive: { $ifNull: ['$brandDetails.isActive', false] },
-    },
-  });
 
-  // 10. Search Term Filter (Post-lookup Match)
-  if (searchTermValue) {
-    const escapedSearch = escapeRegExp(searchTermValue);
-    const terms = escapedSearch.trim().split(/\s+/).filter(Boolean);
-    pipeline.push({
-      $match: {
-        $and: terms.map(term => ({
-          $or: [
-            'title',
-            'sku',
-            'slug',
-            'badge',
-            'features',
-            'description',
-            'brandName',
-            'brandSlug',
-            'subCategoryName',
-            'subCategoryDescription',
-            'subCategorySlug',
-            'categorySlug',
-            'categoryName',
-          ].map(field => ({
-            [field]: { $regex: term, $options: 'i' },
-          })),
-        })),
-      },
-    });
-  }
-
-  // 11. Category Slug Filter
-  if (
-    filterCategory &&
-    isSlug(filterCategory) &&
-    !mongoose.isValidObjectId(filterCategory)
-  ) {
-    pipeline.push({
-      $match: {
-        categorySlug: encodeURI(filterCategory),
-      },
-    });
-  }
-
-  // 12. Brand Filter
-  const brandFilter: PipelineStage.Match['$match'] = {
-    $or: [],
-  };
-
-  if (brandIds.length > 0) {
-    brandFilter.$or!.push({
-      brand: {
-        $in: brandIds,
-      },
-    });
-  }
-
-  if (brandTexts.length > 0) {
-    brandFilter.$or!.push(
-      {
-        brandSlug: {
-          $in: brandTexts,
-        },
-      },
-      {
-        brandName: {
-          $in: brandTexts,
-        },
-      },
-    );
-  }
-
-  if (brandFilter.$or!.length > 0) {
-    pipeline.push({
-      $match: brandFilter,
-    });
-  }
-
-  // 13. Special Category Tag Match
-  if (tagValue === 'industrial' || tagValue === 'home') {
-    const pattern =
-      tagValue === 'industrial'
-        ? /tool|machine|industrial|welding|cutting/i
-        : /home|fan|cleaning|cooler/i;
-    pipeline.push({
-      $match: {
-        categoryName: { $regex: pattern },
-      },
-    });
-  }
-
-  // 14. Active Status Enforcement
-  if (!includeInactive) {
-    pipeline.push({
-      $match: {
-        isSubCategoryActive: true,
-        isCategoryActive: true,
-        isActive: true,
-        isBrandActive: true,
-      },
-    });
-  }
-
-  // 15. Sorting Stage
-  const sortValue = getString(sort);
-  let sortStage: Record<string, 1 | -1> = { createdAt: -1, _id: -1 };
-  if (sortValue === 'price-asc') {
-    sortStage = { price: 1, createdAt: -1, _id: -1 };
-  } else if (sortValue === 'price-desc') {
-    sortStage = { price: -1, createdAt: -1, _id: -1 };
-  } else if (sortValue === 'oldest') {
-    sortStage = { createdAt: 1, _id: 1 };
-  }
-
-  pipeline.push({
-    $sort: sortStage,
-  });
-
-  pipeline.push({
-    $addFields: {
       brand: '$brandDetails',
       category: '$categoryDetails',
     },
   });
 
-  // 16. Cleanup Reference Raw Lookups
   pipeline.push({
     $project: {
       brandDetails: 0,
@@ -874,26 +737,14 @@ export const getAllProductsFromDBNew = async (
     },
   });
 
-  // 17. Final Facet Stage for Pagination
+  // 5. Pagination Facet
   pipeline.push({
     $facet: {
-      data: [
-        {
-          $skip: skip,
-        },
-        {
-          $limit: currentLimit,
-        },
-      ],
-      meta: [
-        {
-          $count: 'total',
-        },
-      ],
+      data: [{ $skip: skip }, { $limit: currentLimit }],
+      meta: [{ $count: 'total' }],
     },
   });
 
-  // Execute aggregation with allowDiskUse enabled to avoid 32 MB RAM sort limits
   const result = await ProductModel.aggregate(pipeline).allowDiskUse(true);
 
   const data = result?.[0]?.data || [];
