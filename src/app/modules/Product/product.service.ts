@@ -482,16 +482,18 @@ export const getAllProductsFromDBNew = async (
   const currentLimit = toPositiveNumber(limit, 10);
   const skip = (currentPage - 1) * currentLimit;
 
-  // ---------------------------------------------------------
-  // 1. Pre-fetch Matching Category & Brand IDs (If Slugs/Names passed)
-  // ---------------------------------------------------------
+  const searchTermValue = getString(searchTerm);
+  const tagValue = getString(tag);
   const filterCategory = getString(category || c);
-  const filterBrands =
-    getString(brand || b)
-      ?.split(',')
-      ?.map(v => decodeURIComponent(v.trim()))
-      .filter(Boolean) ?? [];
+  const filterSubCategory = getString(subCategory || subCategorySlug);
+  const priceValue = getString(price || p);
+  const stockValue = getString(stock);
 
+  // ---------------------------------------------------------
+  // 1. Pre-fetch Category & Brand IDs for Category, Brand, Tag & Search
+  // ---------------------------------------------------------
+
+  // A. Category Pre-fetch
   let categoryIdMatch: Types.ObjectId | null = null;
   if (filterCategory) {
     if (mongoose.isValidObjectId(filterCategory)) {
@@ -505,6 +507,26 @@ export const getAllProductsFromDBNew = async (
       if (matchedCat) categoryIdMatch = matchedCat._id as Types.ObjectId;
     }
   }
+
+  // B. Special Tag Category Pre-fetch ('industrial' | 'home')
+  let tagCategoryIds: Types.ObjectId[] = [];
+  if (tagValue === 'industrial' || tagValue === 'home') {
+    const pattern =
+      tagValue === 'industrial'
+        ? /tool|machine|industrial|welding|cutting/i
+        : /home|fan|cleaning|cooler/i;
+    const matchedTagCats = await CategoryModel.find({ name: pattern })
+      .select('_id')
+      .lean();
+    tagCategoryIds = matchedTagCats.map(cat => cat._id as Types.ObjectId);
+  }
+
+  // C. Brand Pre-fetch
+  const filterBrands =
+    getString(brand || b)
+      ?.split(',')
+      ?.map(v => decodeURIComponent(v.trim()))
+      .filter(Boolean) ?? [];
 
   const brandObjectIds = filterBrands
     .filter(v => mongoose.isValidObjectId(v))
@@ -520,22 +542,62 @@ export const getAllProductsFromDBNew = async (
     matchedBrands.forEach(b => brandObjectIds.push(b._id as Types.ObjectId));
   }
 
+  // D. Search Term Pre-fetch (Search across categories and brands)
+  let searchCategoryIds: Types.ObjectId[] = [];
+  let searchBrandIds: Types.ObjectId[] = [];
+
+  if (searchTermValue) {
+    const terms = searchTermValue.trim().split(/\s+/).filter(Boolean);
+    const regexes = terms.map(term => new RegExp(escapeRegExp(term), 'i'));
+
+    const [matchedSearchCats, matchedSearchBrands] = await Promise.all([
+      CategoryModel.find({
+        $or: [
+          { name: { $in: regexes } },
+          { slug: { $in: regexes } },
+          { 'subCategories.name': { $in: regexes } },
+          { 'subCategories.slug': { $in: regexes } },
+        ],
+      })
+        .select('_id')
+        .lean(),
+      BrandModel.find({
+        $or: [{ name: { $in: regexes } }, { slug: { $in: regexes } }],
+      })
+        .select('_id')
+        .lean(),
+    ]);
+
+    searchCategoryIds = matchedSearchCats.map(c => c._id as Types.ObjectId);
+    searchBrandIds = matchedSearchBrands.map(b => b._id as Types.ObjectId);
+  }
+
   // ---------------------------------------------------------
-  // 2. Build Direct Filter Conditions
+  // 2. Build Early $match Conditions directly on Product Collection
   // ---------------------------------------------------------
   const matchConditions: Record<string, any> = {};
 
-  if (excludeSlug) matchConditions.slug = { $ne: encodeURI(excludeSlug) };
-  if (categoryIdMatch) matchConditions.category = categoryIdMatch;
+  if (excludeSlug) {
+    matchConditions.slug = { $ne: encodeURI(excludeSlug) };
+  }
 
-  const filterSubCategory = getString(subCategory || subCategorySlug);
-  if (filterSubCategory) matchConditions.subCategorySlug = filterSubCategory;
+  if (categoryIdMatch) {
+    matchConditions.category = categoryIdMatch;
+  }
 
-  if (brandObjectIds.length > 0)
+  if (tagCategoryIds.length > 0) {
+    matchConditions.category = { $in: tagCategoryIds };
+  }
+
+  if (filterSubCategory) {
+    matchConditions.subCategorySlug = filterSubCategory;
+  }
+
+  if (brandObjectIds.length > 0) {
     matchConditions.brand = { $in: brandObjectIds };
+  }
 
   // Price Filter
-  const priceValue = getString(price || p);
   if (priceValue) {
     let priceQuery: Record<string, any> = {};
     if (priceValue === 'under-10000') priceQuery = { $lt: 10000 };
@@ -553,9 +615,6 @@ export const getAllProductsFromDBNew = async (
   }
 
   // Stock & Tag Filter
-  const stockValue = getString(stock);
-  const tagValue = getString(tag);
-
   if (stockValue === 'in-stock') {
     matchConditions.$or = [
       { stock: { $gt: 0 } },
@@ -565,35 +624,60 @@ export const getAllProductsFromDBNew = async (
   }
 
   if (stockValue === 'featured' || tagValue === 'featured') {
-    matchConditions.isFeatured = true;
+    matchConditions.$or = [
+      { isFeatured: true },
+      { badge: { $regex: 'featured', $options: 'i' } },
+    ];
   }
 
   if (stockValue === 'sale' || tagValue === 'sale') {
-    matchConditions.oldPrice = { $exists: true, $ne: null };
+    matchConditions.$or = [
+      { oldPrice: { $exists: true, $ne: null } },
+      { badge: { $regex: 'sale|%', $options: 'i' } },
+    ];
+  }
+
+  if (tagValue === 'latest') {
+    matchConditions.$or = [
+      { badge: { $exists: false } },
+      { badge: { $not: /old/i } },
+    ];
   }
 
   if (!includeInactive) {
     matchConditions.isActive = true;
   }
 
-  // Search Filter
-  const searchTermValue = getString(searchTerm);
+  // Combined Search Filter (Search product fields OR matching category/brand IDs)
   if (searchTermValue) {
     const escapedSearch = escapeRegExp(searchTermValue);
     const terms = escapedSearch.trim().split(/\s+/).filter(Boolean);
-    matchConditions.$and = terms.map(term => ({
-      $or: [
-        { title: { $regex: term, $options: 'i' } },
-        { sku: { $regex: term, $options: 'i' } },
-        { slug: { $regex: term, $options: 'i' } },
-        { badge: { $regex: term, $options: 'i' } },
-        { description: { $regex: term, $options: 'i' } },
-      ],
-    }));
+
+    matchConditions.$and = terms.map(term => {
+      const reg = { $regex: term, $options: 'i' };
+      const orConditions: any[] = [
+        { title: reg },
+        { sku: reg },
+        { slug: reg },
+        { badge: reg },
+        { features: reg },
+        { description: reg },
+        { subCategorySlug: reg },
+      ];
+
+      if (searchCategoryIds.length > 0) {
+        orConditions.push({ category: { $in: searchCategoryIds } });
+      }
+      if (searchBrandIds.length > 0) {
+        orConditions.push({ brand: { $in: searchBrandIds } });
+      }
+
+      return { $or: orConditions };
+    });
   }
 
   // ---------------------------------------------------------
-  // 3. Build Optimised Data Pipeline (Match -> Sort -> Skip -> Limit -> Lookup)
+  // 3. Optimized Pipeline (Match -> Sort -> Skip -> Limit -> Lookup)
   // ---------------------------------------------------------
   const dataPipeline: PipelineStage[] = [];
 
@@ -612,11 +696,11 @@ export const getAllProductsFromDBNew = async (
 
   dataPipeline.push({ $sort: sortStage });
 
-  // STEP 3: PAGINATE EARLY! (এখানেই ১০টা ডকুমেন্টে সীমাবদ্ধ করে মেমোরি বাঁচানো হচ্ছে)
+  // STEP 3: PAGINATE EARLY (Limits data to currentLimit items before lookup)
   dataPipeline.push({ $skip: skip });
   dataPipeline.push({ $limit: currentLimit });
 
-  // STEP 4: LOOKUP ONLY FOR THE PAGINATED 10 DOCUMENTS
+  // STEP 4: LOOKUP ONLY FOR PAGINATED ITEMS
   dataPipeline.push(
     {
       $lookup: {
@@ -670,7 +754,7 @@ export const getAllProductsFromDBNew = async (
     { $unwind: { path: '$brandDetails', preserveNullAndEmptyArrays: true } },
   );
 
-  // STEP 5: Add Computed Fields & Formatting
+  // STEP 5: Add Computed Fields & Output Formatting
   dataPipeline.push({
     $addFields: {
       categoryId: { $ifNull: ['$categoryDetails._id', null] },
@@ -734,7 +818,7 @@ export const getAllProductsFromDBNew = async (
   });
 
   // ---------------------------------------------------------
-  // 4. Run Data Query & Count Query in Parallel (Fast & Zero RAM Issues)
+  // 4. Parallel Query Execution
   // ---------------------------------------------------------
   const [data, total] = await Promise.all([
     ProductModel.aggregate(dataPipeline),
