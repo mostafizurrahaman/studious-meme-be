@@ -77,4 +77,6 @@ productSchema.index(
   { name: 'product_active_noCod_createdAt_idx' },
 );
 
+productSchema.index({ createdAt: -1, _id: -1 });
+productSchema.index({ price: 1, createdAt: -1, _id: -1 });
 export const ProductModel = model<IProduct>('Product', productSchema);
