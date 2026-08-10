@@ -456,9 +456,7 @@ const getAllProductsFromDB = async (query: Record<string, unknown>) => {
   };
 };
 
-export const getAllProductsFromDBNew = async (
-  query: TGetAllProductQueryType,
-) => {
+const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
   const {
     page = 1,
     limit = 10,
@@ -478,297 +476,245 @@ export const getAllProductsFromDBNew = async (
     tag,
   } = query;
 
+  // Limit and pagination:
   const currentPage = toPositiveNumber(page, 1);
   const currentLimit = toPositiveNumber(limit, 10);
   const skip = (currentPage - 1) * currentLimit;
 
+  const pipeline: PipelineStage[] = [];
+
+  // Parse helper values
   const searchTermValue = getString(searchTerm);
-  const tagValue = getString(tag);
-  const filterCategory = getString(category || c);
-  const filterSubCategory = getString(subCategory || subCategorySlug);
+
   const priceValue = getString(price || p);
   const stockValue = getString(stock);
+  const tagValue = getString(tag);
 
-  // ---------------------------------------------------------
-  // 1. Pre-fetch Category & Brand IDs for Category, Brand, Tag & Search
-  // ---------------------------------------------------------
-
-  // A. Category Pre-fetch
-  let categoryIdMatch: Types.ObjectId | null = null;
-  if (filterCategory) {
-    if (mongoose.isValidObjectId(filterCategory)) {
-      categoryIdMatch = new Types.ObjectId(filterCategory);
-    } else if (typeof isSlug === 'function' && isSlug(filterCategory)) {
-      const matchedCat = await CategoryModel.findOne({
-        slug: encodeURI(filterCategory),
-      })
-        .select('_id')
-        .lean();
-      if (matchedCat) categoryIdMatch = matchedCat._id as Types.ObjectId;
-    }
+  // 1. Exclude slug filter (Early Match)
+  if (excludeSlug) {
+    pipeline.push({
+      $match: {
+        slug: {
+          $ne: encodeURI(excludeSlug),
+        },
+      },
+    });
   }
 
-  // B. Special Tag Category Pre-fetch ('industrial' | 'home')
-  let tagCategoryIds: Types.ObjectId[] = [];
-  if (tagValue === 'industrial' || tagValue === 'home') {
-    const pattern =
-      tagValue === 'industrial'
-        ? /tool|machine|industrial|welding|cutting/i
-        : /home|fan|cleaning|cooler/i;
-    const matchedTagCats = await CategoryModel.find({ name: pattern })
-      .select('_id')
-      .lean();
-    tagCategoryIds = matchedTagCats.map(cat => cat._id as Types.ObjectId);
-  }
-
-  // C. Brand Pre-fetch
+  // 2. Category based filter (Early Match)
+  const filterCategory = getString(category || c);
+  const filterSubCategory = getString(subCategory || subCategorySlug);
   const filterBrands =
     getString(brand || b)
       ?.split(',')
       ?.map(v => decodeURIComponent(v.trim()))
       .filter(Boolean) ?? [];
 
-  const brandObjectIds = filterBrands
+  const brandIds = filterBrands
     .filter(v => mongoose.isValidObjectId(v))
     .map(v => new Types.ObjectId(v));
+
   const brandTexts = filterBrands.filter(v => !mongoose.isValidObjectId(v));
 
-  if (brandTexts.length > 0) {
-    const matchedBrands = await BrandModel.find({
-      $or: [{ slug: { $in: brandTexts } }, { name: { $in: brandTexts } }],
-    })
-      .select('_id')
-      .lean();
-    matchedBrands.forEach(b => brandObjectIds.push(b._id as Types.ObjectId));
+  if (filterCategory && mongoose.isValidObjectId(filterCategory)) {
+    pipeline.push({
+      $match: {
+        category: new Types.ObjectId(filterCategory),
+      },
+    });
   }
 
-  // D. Search Term Pre-fetch (Search across categories and brands)
-  let searchCategoryIds: Types.ObjectId[] = [];
-  let searchBrandIds: Types.ObjectId[] = [];
-
-  if (searchTermValue) {
-    const terms = searchTermValue.trim().split(/\s+/).filter(Boolean);
-    const regexes = terms.map(term => new RegExp(escapeRegExp(term), 'i'));
-
-    const [matchedSearchCats, matchedSearchBrands] = await Promise.all([
-      CategoryModel.find({
-        $or: [
-          { name: { $in: regexes } },
-          { slug: { $in: regexes } },
-          { 'subCategories.name': { $in: regexes } },
-          { 'subCategories.slug': { $in: regexes } },
-        ],
-      })
-        .select('_id')
-        .lean(),
-      BrandModel.find({
-        $or: [{ name: { $in: regexes } }, { slug: { $in: regexes } }],
-      })
-        .select('_id')
-        .lean(),
-    ]);
-
-    searchCategoryIds = matchedSearchCats.map(c => c._id as Types.ObjectId);
-    searchBrandIds = matchedSearchBrands.map(b => b._id as Types.ObjectId);
-  }
-
-  // ---------------------------------------------------------
-  // 2. Build Early $match Conditions directly on Product Collection
-  // ---------------------------------------------------------
-  const matchConditions: Record<string, any> = {};
-
-  if (excludeSlug) {
-    matchConditions.slug = { $ne: encodeURI(excludeSlug) };
-  }
-
-  if (categoryIdMatch) {
-    matchConditions.category = categoryIdMatch;
-  }
-
-  if (tagCategoryIds.length > 0) {
-    matchConditions.category = { $in: tagCategoryIds };
-  }
-
+  // 3. Subcategory slug filter (Early Match)
   if (filterSubCategory) {
-    matchConditions.subCategorySlug = filterSubCategory;
+    pipeline.push({
+      $match: {
+        subCategorySlug: filterSubCategory,
+      },
+    });
   }
 
-  if (brandObjectIds.length > 0) {
-    matchConditions.brand = { $in: brandObjectIds };
-  }
-
-  // Price Filter
+  // 5. Price filter (Early Match)
   if (priceValue) {
     let priceQuery: Record<string, any> = {};
-    if (priceValue === 'under-10000') priceQuery = { $lt: 10000 };
-    else if (priceValue === '10000-50000')
+    if (priceValue === 'under-10000') {
+      priceQuery = { $lt: 10000 };
+    } else if (priceValue === '10000-50000') {
       priceQuery = { $gte: 10000, $lt: 50000 };
-    else if (priceValue === '50000-plus') priceQuery = { $gte: 50000 };
-    else {
+    } else if (priceValue === '50000-plus') {
+      priceQuery = { $gte: 50000 };
+    } else {
       const customRange = parseCustomPriceRange(priceValue);
       if (customRange) {
         if (customRange.min !== undefined) priceQuery.$gte = customRange.min;
         if (customRange.max !== undefined) priceQuery.$lte = customRange.max;
       }
     }
-    if (Object.keys(priceQuery).length > 0) matchConditions.price = priceQuery;
+
+    if (Object.keys(priceQuery).length > 0) {
+      pipeline.push({
+        $match: {
+          price: priceQuery,
+        },
+      });
+    }
   }
 
-  // Stock & Tag Filter
+  // 6. Stock & Tag filters (Early Match)
   if (stockValue === 'in-stock') {
-    matchConditions.$or = [
-      { stock: { $gt: 0 } },
-      { stock: { $exists: false } },
-      { stock: null },
-    ];
-  }
-
-  if (stockValue === 'featured' || tagValue === 'featured') {
-    matchConditions.$or = [
-      { isFeatured: true },
-      { badge: { $regex: 'featured', $options: 'i' } },
-    ];
-  }
-
-  if (stockValue === 'sale' || tagValue === 'sale') {
-    matchConditions.$or = [
-      { oldPrice: { $exists: true, $ne: null } },
-      { badge: { $regex: 'sale|%', $options: 'i' } },
-    ];
-  }
-
-  if (tagValue === 'latest') {
-    matchConditions.$or = [
-      { badge: { $exists: false } },
-      { badge: { $not: /old/i } },
-    ];
-  }
-
-  if (!includeInactive) {
-    matchConditions.isActive = true;
-  }
-
-  // Combined Search Filter (Search product fields OR matching category/brand IDs)
-  if (searchTermValue) {
-    const escapedSearch = escapeRegExp(searchTermValue);
-    const terms = escapedSearch.trim().split(/\s+/).filter(Boolean);
-
-    matchConditions.$and = terms.map(term => {
-      const reg = { $regex: term, $options: 'i' };
-      const orConditions: any[] = [
-        { title: reg },
-        { sku: reg },
-        { slug: reg },
-        { badge: reg },
-        { features: reg },
-        { description: reg },
-        { subCategorySlug: reg },
-      ];
-
-      if (searchCategoryIds.length > 0) {
-        orConditions.push({ category: { $in: searchCategoryIds } });
-      }
-      if (searchBrandIds.length > 0) {
-        orConditions.push({ brand: { $in: searchBrandIds } });
-      }
-
-      return { $or: orConditions };
+    pipeline.push({
+      $match: {
+        $or: [
+          { stock: { $gt: 0 } },
+          { stock: { $exists: false } },
+          { stock: null },
+        ],
+      },
     });
   }
 
-  // ---------------------------------------------------------
-  // 3. Optimized Pipeline (Match -> Sort -> Skip -> Limit -> Lookup)
-  // ---------------------------------------------------------
-  const dataPipeline: PipelineStage[] = [];
-
-  if (Object.keys(matchConditions).length > 0) {
-    dataPipeline.push({ $match: matchConditions });
+  if (stockValue === 'featured' || tagValue === 'featured') {
+    pipeline.push({
+      $match: {
+        $or: [
+          { isFeatured: true },
+          { badge: { $regex: 'featured', $options: 'i' } },
+        ],
+      },
+    });
   }
 
-  // Sort Stage
-  const sortValue = getString(sort);
-  let sortStage: Record<string, 1 | -1> = { createdAt: -1, _id: -1 };
-  if (sortValue === 'price-asc')
-    sortStage = { price: 1, createdAt: -1, _id: -1 };
-  else if (sortValue === 'price-desc')
-    sortStage = { price: -1, createdAt: -1, _id: -1 };
-  else if (sortValue === 'oldest') sortStage = { createdAt: 1, _id: 1 };
+  if (stockValue === 'sale' || tagValue === 'sale') {
+    pipeline.push({
+      $match: {
+        $or: [
+          { oldPrice: { $exists: true, $ne: null } },
+          { badge: { $regex: 'sale|%', $options: 'i' } },
+        ],
+      },
+    });
+  }
 
-  dataPipeline.push({ $sort: sortStage });
+  if (tagValue === 'latest') {
+    pipeline.push({
+      $match: {
+        $or: [{ badge: { $exists: false } }, { badge: { $not: /old/i } }],
+      },
+    });
+  }
 
-  // STEP 3: PAGINATE EARLY (Limits data to currentLimit items before lookup)
-  dataPipeline.push({ $skip: skip });
-  dataPipeline.push({ $limit: currentLimit });
-
-  // STEP 4: LOOKUP ONLY FOR PAGINATED ITEMS
-  dataPipeline.push(
-    {
-      $lookup: {
-        from: 'categories',
-        let: {
-          categoryId: '$category',
-          productSubCategorySlug: '$subCategorySlug',
+  // Lookup Category Details:
+  pipeline.push({
+    $lookup: {
+      from: 'categories',
+      let: {
+        categoryId: '$category',
+        productSubCategorySlug: '$subCategorySlug',
+      },
+      as: 'categoryDetails',
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $eq: ['$_id', '$$categoryId'],
+            },
+          },
         },
-        as: 'categoryDetails',
-        pipeline: [
-          { $match: { $expr: { $eq: ['$_id', '$$categoryId'] } } },
-          {
-            $project: {
-              name: 1,
-              image: 1,
-              slug: 1,
-              accent: 1,
-              description: 1,
-              metaTitle: 1,
-              metaDescription: 1,
-              isActive: 1,
-              subCategories: {
-                $filter: {
-                  input: '$subCategories',
-                  as: 'subCategory',
-                  cond: {
-                    $eq: ['$$subCategory.slug', '$$productSubCategorySlug'],
-                  },
+        {
+          $project: {
+            name: 1,
+            image: 1,
+            slug: 1,
+            accent: 1,
+            description: 1,
+            metaTitle: 1,
+            metaDescription: 1,
+            isActive: true,
+            subCategories: {
+              $filter: {
+                input: '$subCategories',
+                as: 'subCategory',
+                cond: {
+                  $eq: ['$$subCategory.slug', '$$productSubCategorySlug'],
                 },
               },
             },
           },
-        ],
-      },
+        },
+      ],
     },
-    {
-      $lookup: {
-        from: 'brands',
-        localField: 'brand',
-        foreignField: '_id',
-        as: 'brandDetails',
-      },
-    },
-    { $unwind: { path: '$categoryDetails', preserveNullAndEmptyArrays: true } },
-    {
-      $unwind: {
-        path: '$categoryDetails.subCategories',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    { $unwind: { path: '$brandDetails', preserveNullAndEmptyArrays: true } },
-  );
+  });
 
-  // STEP 5: Add Computed Fields & Output Formatting
-  dataPipeline.push({
+  // Lookup Brand Details:
+  pipeline.push({
+    $lookup: {
+      from: 'brands',
+      localField: 'brand',
+      foreignField: '_id',
+      as: 'brandDetails', // Fixed typo 'brandDeails' -> 'brandDetails'
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$categoryDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$categoryDetails.subCategories',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$brandDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  // Apply Sorting (Before projection cleanup & facets)
+  const sortValue = getString(sort);
+  let sortStage: Record<string, 1 | -1> = { createdAt: -1, _id: -1 };
+  if (sortValue === 'price-asc') {
+    sortStage = { price: 1, createdAt: -1, _id: -1 };
+  } else if (sortValue === 'price-desc') {
+    sortStage = { price: -1, createdAt: -1, _id: -1 };
+  } else if (sortValue === 'oldest') {
+    sortStage = { createdAt: 1, _id: 1 };
+  }
+
+  pipeline.push({
+    $sort: sortStage,
+  });
+
+  // Do the final Projection & Add Fields:
+  pipeline.push({
     $addFields: {
+      // Category Fields:
       categoryId: { $ifNull: ['$categoryDetails._id', null] },
       categoryName: { $ifNull: ['$categoryDetails.name', null] },
       categorySlug: { $ifNull: ['$categoryDetails.slug', null] },
       categoryImage: { $ifNull: ['$categoryDetails.image', null] },
-      categoryDescription: { $ifNull: ['$categoryDetails.description', null] },
-      categoryMetaTitle: { $ifNull: ['$categoryDetails.metaTitle', null] },
+      categoryDescription: {
+        $ifNull: ['$categoryDetails.description', null],
+      },
+      categoryMetaTitle: {
+        $ifNull: ['$categoryDetails.metaTitle', null],
+      },
       categoryMetaDescription: {
         $ifNull: ['$categoryDetails.metaDescription', null],
       },
-      isCategoryActive: { $ifNull: ['$categoryDetails.isActive', false] },
-      categoryAccent: { $ifNull: ['$categoryDetails.accent', null] },
+      isCategoryActive: {
+        $ifNull: ['$categoryDetails.isActive', false],
+      },
+      categoryAccent: {
+        $ifNull: ['$categoryDetails.accent', null],
+      },
 
+      // Subcategory Fields:
       subCategoryName: {
         $ifNull: ['$categoryDetails.subCategories.name', null],
       },
@@ -790,7 +736,7 @@ export const getAllProductsFromDBNew = async (
       isSubCategoryActive: {
         $cond: {
           if: { $eq: [{ $ifNull: ['$subCategorySlug', null] }, null] },
-          then: true,
+          then: true, // Defaults to true if the product does not have a subcategory
           else: { $ifNull: ['$categoryDetails.subCategories.isActive', false] },
         },
       },
@@ -798,32 +744,154 @@ export const getAllProductsFromDBNew = async (
         $ifNull: ['$categoryDetails.subCategories.accent', null],
       },
 
+      // Brand Details:
       brandId: { $ifNull: ['$brandDetails._id', null] },
       brandName: { $ifNull: ['$brandDetails.name', null] },
       brandImage: { $ifNull: ['$brandDetails.image', null] },
       brandSlug: { $ifNull: ['$brandDetails.slug', null] },
       brandDescription: { $ifNull: ['$brandDetails.description', null] },
       isBrandActive: { $ifNull: ['$brandDetails.isActive', false] },
+    },
+  });
 
+  // 4. Search term filter (Early Match)
+  if (searchTermValue) {
+    const escapedSearch = escapeRegExp(searchTermValue);
+    const terms = escapedSearch.trim().split(/\s+/).filter(Boolean);
+    pipeline.push({
+      $match: {
+        $and: terms.map(term => ({
+          $or: [
+            'title',
+            'sku',
+            'slug',
+            'badge',
+            'features',
+            'description',
+            'brandName',
+            'brandSlug',
+            'subCategoryDescription',
+            'subCategorySlug',
+            'categorySlug',
+            'categoryName',
+          ].map(field => ({
+            [field]: { $regex: term, $options: 'i' },
+          })),
+        })),
+      },
+    });
+  }
+
+  // Special filter for category slug (if slug provided for category or c)
+  if (
+    filterCategory &&
+    isSlug(filterCategory) &&
+    !mongoose.isValidObjectId(filterCategory)
+  ) {
+    pipeline.push({
+      $match: {
+        categorySlug: encodeURI(filterCategory),
+      },
+    });
+  }
+
+  // Brand-specific Filter
+  const brandFilter: PipelineStage.Match['$match'] = {
+    $or: [],
+  };
+
+  if (brandIds.length > 0) {
+    brandFilter.$or!.push({
+      brand: {
+        $in: brandIds,
+      },
+    });
+  }
+
+  if (brandTexts.length > 0) {
+    brandFilter.$or!.push(
+      {
+        brandSlug: {
+          $in: brandTexts,
+        },
+      },
+      {
+        brandName: {
+          $in: brandTexts,
+        },
+      },
+    );
+  }
+
+  if (brandFilter.$or!.length > 0) {
+    pipeline.push({
+      $match: brandFilter,
+    });
+  }
+
+  // Special Category tag match (requires mapped categoryName)
+  if (tagValue === 'industrial' || tagValue === 'home') {
+    const pattern =
+      tagValue === 'industrial'
+        ? /tool|machine|industrial|welding|cutting/i
+        : /home|fan|cleaning|cooler/i;
+    pipeline.push({
+      $match: {
+        categoryName: { $regex: pattern },
+      },
+    });
+  }
+
+  // Active status enforcement
+  if (!includeInactive) {
+    pipeline.push({
+      $match: {
+        isSubCategoryActive: true,
+        isCategoryActive: true,
+        isActive: true,
+        isBrandActive: true,
+      },
+    });
+  }
+
+  pipeline.push({
+    $addFields: {
       brand: '$brandDetails',
       category: '$categoryDetails',
     },
   });
 
-  dataPipeline.push({
+  // Cleanup reference raw lookups
+  pipeline.push({
     $project: {
       brandDetails: 0,
       categoryDetails: 0,
     },
   });
 
-  // ---------------------------------------------------------
-  // 4. Parallel Query Execution
-  // ---------------------------------------------------------
-  const [data, total] = await Promise.all([
-    ProductModel.aggregate(dataPipeline),
-    ProductModel.countDocuments(matchConditions),
-  ]);
+  // Final Facet Stage for Paginated Results
+  pipeline.push({
+    $facet: {
+      data: [
+        {
+          $skip: skip,
+        },
+        {
+          $limit: currentLimit,
+        },
+      ],
+      meta: [
+        {
+          $count: 'total',
+        },
+      ],
+    },
+  });
+
+  const result = await ProductModel.aggregate(pipeline);
+
+  const data = result?.[0]?.data;
+  const total = result?.[0]?.meta?.[0]?.total || 0;
 
   const totalPages = Math.ceil(total / currentLimit) || 1;
 
