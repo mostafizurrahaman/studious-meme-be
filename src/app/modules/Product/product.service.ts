@@ -1108,6 +1108,7 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
   const terms = searchTerm.trim().split(/\s+/).filter(Boolean);
   console.log(terms);
 
+  // getAllProductsFromDBNew এর সাথে মিল রেখে সার্চ ফিল্ডগুলো সাজানো হয়েছে
   const searchableFields = [
     'title',
     'slug',
@@ -1121,12 +1122,10 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
     'categorySlug',
     'subCategoryName',
     'subCategorySlug',
+    'subCategoryDescription',
   ];
 
-  // const regex = new RegExp(term, 'i');
-
   const searchPipeline: PipelineStage[] = [];
-
   const suggestionPipeline: PipelineStage[] = [];
 
   const lookupPipe: PipelineStage[] = [
@@ -1158,6 +1157,7 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
               _id: 1,
               name: 1,
               slug: 1,
+              isActive: 1, // অ্যাক্টিভ স্ট্যাটাস চেক করার জন্য যুক্ত করা হয়েছে
               subCategory: {
                 $first: {
                   $filter: {
@@ -1186,33 +1186,45 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
         preserveNullAndEmptyArrays: true,
       },
     },
+    // $project এর পরিবর্তে $addFields ব্যবহার করা হয়েছে যাতে sku, features, description হারিয়ে না যায়
     {
-      $project: {
-        title: 1,
-        slug: 1,
-        price: 1,
-        oldPrice: 1,
-        images: 1,
-        badge: 1,
-        sellingUnit: 1,
-        categoryName: '$categoryDetails.name',
-        categorySlug: '$categoryDetails.slug',
-        subCategoryName: '$categoryDetails.subCategory.name',
-        subCategorySlug: '$categoryDetails.subCategory.slug',
-        brandName: '$brandDetails.name',
-        brandSlug: '$brandDetails.slug',
+      $addFields: {
+        categoryName: { $ifNull: ['$categoryDetails.name', null] },
+        categorySlug: { $ifNull: ['$categoryDetails.slug', null] },
+        subCategoryName: {
+          $ifNull: ['$categoryDetails.subCategory.name', null],
+        },
+        subCategorySlug: {
+          $ifNull: ['$categoryDetails.subCategory.slug', null],
+        },
+        subCategoryDescription: {
+          $ifNull: ['$categoryDetails.subCategory.description', null],
+        },
+        brandName: { $ifNull: ['$brandDetails.name', null] },
+        brandSlug: { $ifNull: ['$brandDetails.slug', null] },
+
+        // অ্যাক্টিভ স্ট্যাটাস ট্র্যাক করার জন্য ফ্ল্যাগ (getAllProductsFromDBNew এর মতো)
+        isCategoryActive: { $ifNull: ['$categoryDetails.isActive', false] },
+        isSubCategoryActive: {
+          $cond: {
+            if: { $eq: [{ $ifNull: ['$subCategorySlug', null] }, null] },
+            then: true,
+            else: { $ifNull: ['$categoryDetails.subCategory.isActive', false] },
+          },
+        },
+        isBrandActive: { $ifNull: ['$brandDetails.isActive', false] },
       },
     },
-    // {
-    //   $match: {
-    //     $or: searchableFields.map(field => ({
-    //       [field]: {
-    //         $regex: searchTerm,
-    //         $options: 'i',
-    //       },
-    //     })),
-    //   },
-    // },
+    // শুধুমাত্র অ্যাক্টিভ প্রোডাক্ট, ক্যাটাগরি ও ব্র্যান্ড ফিল্টার করা হচ্ছে
+    {
+      $match: {
+        isActive: true,
+        isCategoryActive: true,
+        isSubCategoryActive: true,
+        isBrandActive: true,
+      },
+    },
+    // সবশেষে সার্চ ম্যাচিং করা হচ্ছে
     {
       $match: {
         $and: terms.map(term => ({
@@ -1230,6 +1242,7 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
   searchPipeline.push(...lookupPipe);
   suggestionPipeline.push(...lookupPipe);
 
+  // suggestion pipeline এর প্রসেস
   suggestionPipeline.push({
     $group: {
       _id: '$title',
@@ -1237,9 +1250,6 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
     },
   });
 
-  searchPipeline.push({
-    $limit: limit,
-  });
   suggestionPipeline.push({
     $limit: limit,
   });
@@ -1252,10 +1262,36 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
     },
   });
 
-  // Search across multiple fields
-  const products = await ProductModel.aggregate(searchPipeline);
+  // search pipeline এ সর্টিং যুক্ত করা হলো (যা getAllProductsFromDBNew এর সাথে মিলবে)
+  searchPipeline.push({
+    $sort: { createdAt: -1, _id: -1 },
+  });
 
-  // Get unique title suggestions using aggregation
+  searchPipeline.push({
+    $limit: limit,
+  });
+
+  // সার্চের ফাইনাল আউটপুট ক্লিন রাখার জন্য প্রজেকশন
+  searchPipeline.push({
+    $project: {
+      title: 1,
+      slug: 1,
+      price: 1,
+      oldPrice: 1,
+      images: 1,
+      badge: 1,
+      sellingUnit: 1,
+      categoryName: 1,
+      categorySlug: 1,
+      subCategoryName: 1,
+      subCategorySlug: 1,
+      brandName: 1,
+      brandSlug: 1,
+    },
+  });
+
+  // সার্চ এবং সাজেশন কোয়েরি রান করা হচ্ছে
+  const products = await ProductModel.aggregate(searchPipeline);
   const suggestions = await ProductModel.aggregate(suggestionPipeline);
 
   return { products, suggestions };
