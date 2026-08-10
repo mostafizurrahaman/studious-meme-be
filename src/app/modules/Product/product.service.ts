@@ -483,7 +483,7 @@ export const getAllProductsFromDBNew = async (
   const skip = (currentPage - 1) * currentLimit;
 
   // ---------------------------------------------------------
-  // 1. Pre-fetch Category & Brand IDs (মেমোরি লোড কমানোর জন্য)
+  // 1. Pre-fetch Matching Category & Brand IDs (If Slugs/Names passed)
   // ---------------------------------------------------------
   const filterCategory = getString(category || c);
   const filterBrands =
@@ -497,14 +497,12 @@ export const getAllProductsFromDBNew = async (
     if (mongoose.isValidObjectId(filterCategory)) {
       categoryIdMatch = new Types.ObjectId(filterCategory);
     } else if (typeof isSlug === 'function' && isSlug(filterCategory)) {
-      const matchedCategory = await CategoryModel.findOne({
+      const matchedCat = await CategoryModel.findOne({
         slug: encodeURI(filterCategory),
       })
         .select('_id')
         .lean();
-      if (matchedCategory) {
-        categoryIdMatch = matchedCategory._id as Types.ObjectId;
-      }
+      if (matchedCat) categoryIdMatch = matchedCat._id as Types.ObjectId;
     }
   }
 
@@ -523,26 +521,18 @@ export const getAllProductsFromDBNew = async (
   }
 
   // ---------------------------------------------------------
-  // 2. Build Early $match Conditions (সরাসরি Product কালেকশনে)
+  // 2. Build Direct Filter Conditions
   // ---------------------------------------------------------
   const matchConditions: Record<string, any> = {};
 
-  if (excludeSlug) {
-    matchConditions.slug = { $ne: encodeURI(excludeSlug) };
-  }
-
-  if (categoryIdMatch) {
-    matchConditions.category = categoryIdMatch;
-  }
+  if (excludeSlug) matchConditions.slug = { $ne: encodeURI(excludeSlug) };
+  if (categoryIdMatch) matchConditions.category = categoryIdMatch;
 
   const filterSubCategory = getString(subCategory || subCategorySlug);
-  if (filterSubCategory) {
-    matchConditions.subCategorySlug = filterSubCategory;
-  }
+  if (filterSubCategory) matchConditions.subCategorySlug = filterSubCategory;
 
-  if (brandObjectIds.length > 0) {
+  if (brandObjectIds.length > 0)
     matchConditions.brand = { $in: brandObjectIds };
-  }
 
   // Price Filter
   const priceValue = getString(price || p);
@@ -602,14 +592,16 @@ export const getAllProductsFromDBNew = async (
     }));
   }
 
-  const pipeline: PipelineStage[] = [];
+  // ---------------------------------------------------------
+  // 3. Build Optimised Data Pipeline (Match -> Sort -> Skip -> Limit -> Lookup)
+  // ---------------------------------------------------------
+  const dataPipeline: PipelineStage[] = [];
 
-  // 1. $match stage
   if (Object.keys(matchConditions).length > 0) {
-    pipeline.push({ $match: matchConditions });
+    dataPipeline.push({ $match: matchConditions });
   }
 
-  // 2. Early $sort stage (Product কালেকশনের Index ব্যবহার করবে)
+  // Sort Stage
   const sortValue = getString(sort);
   let sortStage: Record<string, 1 | -1> = { createdAt: -1, _id: -1 };
   if (sortValue === 'price-asc')
@@ -618,10 +610,14 @@ export const getAllProductsFromDBNew = async (
     sortStage = { price: -1, createdAt: -1, _id: -1 };
   else if (sortValue === 'oldest') sortStage = { createdAt: 1, _id: 1 };
 
-  pipeline.push({ $sort: sortStage });
+  dataPipeline.push({ $sort: sortStage });
 
-  // 3. $lookup & $unwind (ফিল্টার ও শর্টিং হওয়ার পর ডাটা সাইজ ছোট থাকলে lookup হবে)
-  pipeline.push(
+  // STEP 3: PAGINATE EARLY! (এখানেই ১০টা ডকুমেন্টে সীমাবদ্ধ করে মেমোরি বাঁচানো হচ্ছে)
+  dataPipeline.push({ $skip: skip });
+  dataPipeline.push({ $limit: currentLimit });
+
+  // STEP 4: LOOKUP ONLY FOR THE PAGINATED 10 DOCUMENTS
+  dataPipeline.push(
     {
       $lookup: {
         from: 'categories',
@@ -674,8 +670,8 @@ export const getAllProductsFromDBNew = async (
     { $unwind: { path: '$brandDetails', preserveNullAndEmptyArrays: true } },
   );
 
-  // 4. Transform & Add Computed Fields
-  pipeline.push({
+  // STEP 5: Add Computed Fields & Formatting
+  dataPipeline.push({
     $addFields: {
       categoryId: { $ifNull: ['$categoryDetails._id', null] },
       categoryName: { $ifNull: ['$categoryDetails.name', null] },
@@ -730,25 +726,21 @@ export const getAllProductsFromDBNew = async (
     },
   });
 
-  pipeline.push({
+  dataPipeline.push({
     $project: {
       brandDetails: 0,
       categoryDetails: 0,
     },
   });
 
-  // 5. Pagination Facet
-  pipeline.push({
-    $facet: {
-      data: [{ $skip: skip }, { $limit: currentLimit }],
-      meta: [{ $count: 'total' }],
-    },
-  });
+  // ---------------------------------------------------------
+  // 4. Run Data Query & Count Query in Parallel (Fast & Zero RAM Issues)
+  // ---------------------------------------------------------
+  const [data, total] = await Promise.all([
+    ProductModel.aggregate(dataPipeline),
+    ProductModel.countDocuments(matchConditions),
+  ]);
 
-  const result = await ProductModel.aggregate(pipeline).allowDiskUse(true);
-
-  const data = result?.[0]?.data || [];
-  const total = result?.[0]?.meta?.[0]?.total || 0;
   const totalPages = Math.ceil(total / currentLimit) || 1;
 
   return {
