@@ -477,6 +477,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     tag,
   } = query;
 
+  console.log(query);
   // Limit and pagination:
   const currentPage = toPositiveNumber(page, 1);
   const currentLimit = toPositiveNumber(limit, 10);
@@ -756,6 +757,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
             'description',
             'brandName',
             'brandSlug',
+            'subCategoryName',
             'subCategoryDescription',
             'subCategorySlug',
             'categorySlug',
