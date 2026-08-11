@@ -13,9 +13,6 @@ const createCategoryIntoDB = async (
   payload: Partial<ICategory>,
   imageFile?: MulterFile,
 ) => {
-  console.log({
-    payload,
-  });
   if (!imageFile) {
     throw new AppError(httpStatus.NOT_FOUND, 'Category image is required!');
   }
@@ -76,9 +73,6 @@ const updateCategoryIntoDB = async (
   payload: Partial<ICategory>,
   imageFile?: MulterFile,
 ) => {
-  console.log({
-    payload,
-  });
   const existingCategory = await CategoryModel.findOne({ slug }).select(
     'image',
   );
@@ -220,22 +214,7 @@ const deleteCategorySubCategoryFromDB = async (
   return category.save();
 };
 
-// {
-//             "_id": "69f5dcdb2d242ed60b012d34",
-//             "name": "Cleaning Maintenance",
-//             "slug": "cleaning-maintenance",
-//             "subCategories": {
-//                 "name": "Automotive",
-//                 "slug": "automotive",
-//                 "description": "Find the best automotive tools in Bangladesh, including rickshaw batteries, car washers, tyre changers, floor jacks, bike ramps, and water guns. Buy online now at affordable prices!",
-//                 "isActive": true
-//             },
-//             "description": "Discover the best cleaning & maintenance tools at the best price in Bangladesh. Buy online a wide range of products, including vacuum cleaners, dustbins, cleaning buckets, tubs, automotive cleaning tools, disinfection supplies, fixtures, and plumbing products. Perfect for homes and industries, these tools ensure efficient cleaning and maintenance. Shop now for premium-quality products in BD at affordable prices.",
-//             "isActive": true,
-//             "createdAt": "2026-05-02T11:15:39.331Z",
-//             "updatedAt": "2026-05-02T11:15:39.331Z"
-//         }
-
+//
 const getAllSubCategories = async (query: TGetAllSubCategoriesQueryType) => {
   const {
     limit,
@@ -360,6 +339,7 @@ const getAllSubCategories = async (query: TGetAllSubCategoriesQueryType) => {
       },
       isSubCategoryActive: { $ifNull: ['$subCategories.isActive', false] },
       subCategoryImage: { $ifNull: ['$subCategories.image', null] },
+      subCategoryImageAlt: { $ifNull: ['$subCategories.imageAlt', null] },
       categoryId: '$_id',
       categoryName: '$name',
       categoryDescription: { $ifNull: ['$description', null] },
