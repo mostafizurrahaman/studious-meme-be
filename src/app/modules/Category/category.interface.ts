@@ -2,6 +2,7 @@ export interface ISubCategoryItem {
   name: string;
   slug: string;
   image?: string;
+  imageAlt?: string;
   description?: string;
   accent?: string;
   isActive: boolean;
@@ -12,6 +13,7 @@ export interface ICategory {
   slug: string;
   subCategories: ISubCategoryItem[];
   image?: string;
+  imageAlt?: string;
   description?: string;
   metaTitle?: string;
   metaDescription?: string;

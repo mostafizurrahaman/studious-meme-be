@@ -18,7 +18,7 @@ const createCategory = asyncHandler(async (req, res) => {
 // 2. getAllCategories
 const getAllCategories = asyncHandler(async (_req, res) => {
   const result = await CategoryService.getAllCategoriesFromDB();
-
+  console.log(result);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     message: 'Categories fetched successfully!',

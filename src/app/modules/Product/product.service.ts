@@ -916,7 +916,7 @@ const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
 
 // 4. getProductBySlugFromDB
 const getProductBySlugFromDB = async (slug: string) => {
-  const doc = await ProductModel.findOne({ slug })
+  const doc = await ProductModel.findOne({ slug: normalizeSlug(slug) })
     .populate('brand')
     .populate('category')
     .lean();
@@ -927,7 +927,7 @@ const getProductBySlugFromDB = async (slug: string) => {
 // 5. getActiveProductBySlugFromDB
 const getActiveProductBySlugFromDB = async (slug: string) => {
   const doc = await ProductModel.findOne({
-    slug,
+    slug: normalizeSlug(slug),
     isActive: true,
   })
     .populate({ path: 'brand', match: { isActive: true } })

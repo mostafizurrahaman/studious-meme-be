@@ -14,6 +14,7 @@ const brandSchema = new Schema<IBrand>(
       unique: true,
     },
     image: { type: String },
+    imageAlt: { type: String },
     description: { type: String },
     isActive: { type: Boolean, default: true },
   },
@@ -24,9 +25,6 @@ brandSchema.index(
   { isActive: 1, createdAt: -1 },
   { name: 'brand_active_createdAt_idx' },
 );
-brandSchema.index(
-  { isActive: 1, name: 1 },
-  { name: 'brand_active_name_idx' },
-);
+brandSchema.index({ isActive: 1, name: 1 }, { name: 'brand_active_name_idx' });
 
 export const BrandModel = model<IBrand>('Brand', brandSchema);
