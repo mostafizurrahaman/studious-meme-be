@@ -13,6 +13,7 @@ const brandBaseSchema = z.object({
     .min(2, { message: 'Slug must be at least 2 characters long' })
     .max(50, { message: 'Slug must be at most 50 characters long' }),
   image: z.string().optional(),
+  imageAlt: z.string().optional(),
   description: z
     .string({ error: 'Description is required' })
     .trim()

@@ -72,6 +72,10 @@ const productBaseSchema = z.object({
     .array(z.string().trim().min(1))
     .max(5, { message: 'You can upload up to 5 product images!' })
     .optional(),
+  imageAlt: z
+    .array(z.string().trim().min(1))
+    .max(5, { message: 'You can add up to 5 product image alt!' })
+    .optional(),
   features: z
     .string({ error: 'Features are required!' })
     .trim()
@@ -291,9 +295,23 @@ const getProductsQueryValidationSchema = z.object({
 
 export const ProductValidation = {
   productCreateSchema: z.object({
-    body: productBaseSchema.extend({
-      sellingUnit: sellingUnitSchema.default(DEFAULT_SELLING_UNIT),
-    }),
+    body: productBaseSchema
+      .extend({
+        sellingUnit: sellingUnitSchema.default(DEFAULT_SELLING_UNIT),
+      })
+      .superRefine((data, ctx) => {
+        if (
+          data.images &&
+          data.imageAlt &&
+          data?.images?.length < data?.imageAlt?.length
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['imageAlt'],
+            message: 'Image alt must be equal or less then images count.',
+          });
+        }
+      }),
   }),
   productUpdateSchema: z.object({
     params: z.object({
@@ -306,7 +324,20 @@ export const ProductValidation = {
       .extend({
         sellingUnit: sellingUnitSchema,
       })
-      .partial(),
+      .partial()
+      .superRefine((data, ctx) => {
+        if (
+          data.images &&
+          data.imageAlt &&
+          data?.images?.length < data?.imageAlt?.length
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['imageAlt'],
+            message: 'Image alt must be equal or less then images count.',
+          });
+        }
+      }),
   }),
   getProductsQueryValidationSchema,
 };

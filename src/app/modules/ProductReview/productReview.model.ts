@@ -30,6 +30,9 @@ const productReviewSchema = new Schema<IProductReview>(
       required: [true, 'Display image is required!'],
       trim: true,
     },
+    displayImageAlt: {
+      type: String,
+    },
     rating: {
       type: Number,
       required: [true, 'Rating is required!'],
@@ -51,6 +54,9 @@ const productReviewSchema = new Schema<IProductReview>(
           Array.isArray(value) && value.length <= 5,
         message: 'You can upload up to 5 review images!',
       },
+    },
+    imageAlt: {
+      type: String,
     },
     isVerifiedPurchase: {
       type: Boolean,

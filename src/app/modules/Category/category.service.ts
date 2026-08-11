@@ -13,6 +13,9 @@ const createCategoryIntoDB = async (
   payload: Partial<ICategory>,
   imageFile?: MulterFile,
 ) => {
+  console.log({
+    payload,
+  });
   if (!imageFile) {
     throw new AppError(httpStatus.NOT_FOUND, 'Category image is required!');
   }
@@ -73,6 +76,9 @@ const updateCategoryIntoDB = async (
   payload: Partial<ICategory>,
   imageFile?: MulterFile,
 ) => {
+  console.log({
+    payload,
+  });
   const existingCategory = await CategoryModel.findOne({ slug }).select(
     'image',
   );

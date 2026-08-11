@@ -22,6 +22,10 @@ const productSchema = new Schema<IProduct>(
         message: 'Product images must be between 1 and 5 items!',
       },
     },
+    imageAlt: {
+      type: [String],
+    },
+
     features: { type: String, required: [true, 'Features are required!'] },
     description: {
       type: String,

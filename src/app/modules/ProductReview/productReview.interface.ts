@@ -12,10 +12,12 @@ export interface IProductReview extends Document {
 
   displayName: string;
   displayImage: string;
+  displayImageAlt: string;
 
   rating: number;
   comment: string;
   images: string[];
+  imageAlt: string;
 
   isVerifiedPurchase: boolean;
 

@@ -7,6 +7,7 @@ export interface IProduct {
   slug: string;
   sku: string;
   images: string[];
+  imageAlt: string[];
   features: string;
   description: string;
   price: number;

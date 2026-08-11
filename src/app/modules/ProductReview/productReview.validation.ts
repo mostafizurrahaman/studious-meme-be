@@ -39,6 +39,7 @@ const manualCreateReviewSchema = z.object({
       .min(1, { message: 'Display name is required!' })
       .max(100, { message: 'Display name cannot exceed 100 characters!' }),
     displayImage: z.string().trim().optional(),
+    displayImageAlt: z.string().trim().optional(),
     rating: z.coerce
       .number({ error: 'Rating is required!' })
       .min(1, { message: 'Rating must be at least 1!' })
@@ -50,6 +51,7 @@ const manualCreateReviewSchema = z.object({
       .min(1, { message: 'Comment is required!' })
       .max(2000, { message: 'Comment cannot exceed 2000 characters!' }),
     images: reviewImagesSchema,
+    imageAlt: z.string().trim().optional(),
     status: z.enum(['pending', 'approved', 'rejected', 'hidden']).optional(),
   }),
 });
@@ -102,7 +104,7 @@ const updateReviewSchema = z.object({
       images: reviewImagesSchema,
       status: z.enum(['pending', 'approved', 'rejected', 'hidden']).optional(),
     })
-    .refine((data) => Object.keys(data).length > 0, {
+    .refine(data => Object.keys(data).length > 0, {
       message: 'At least one field is required!',
     }),
 });

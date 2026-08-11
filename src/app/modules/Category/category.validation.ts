@@ -11,6 +11,11 @@ const categorySubCategorySchema = z.object({
     .trim()
     .min(1, { message: 'SubCategory slug is required!' }),
   image: z.string().optional(),
+  imageAlt: z
+    .string({
+      error: 'Image alt should be string',
+    })
+    .optional(),
   description: z
     .string({ error: 'SubCategory description is required!' })
     .trim()
@@ -42,6 +47,11 @@ const categoryBaseSchema = z.object({
 
   subCategories: z.array(categorySubCategorySchema).optional(),
   image: z.string().optional(),
+  imageAlt: z
+    .string({
+      error: 'Image alt should be string',
+    })
+    .optional(),
   metaTitle: z
     .string({
       error: () => 'Meta title is required!',
