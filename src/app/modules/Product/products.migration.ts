@@ -42,7 +42,7 @@ export const migrateProductBrandCategoryNames = async (): Promise<void> => {
         { categoryName: { $exists: false } },
         {
           $and: [
-            { subCategorySlug: { $exists: true, $ne: null, $ne: '' } },
+            { subCategorySlug: { $exists: true, $ne: null } },
             { subCategoryName: { $exists: false } },
           ],
         },
@@ -122,6 +122,7 @@ export const migrateProductBrandCategoryNames = async (): Promise<void> => {
         console.log(
           `Migrated SKU: ${product.sku} | Brand: ${brand.name} | Category: ${category.name} | Sub Category: ${subCategoryName || 'N/A'}`,
         );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.error(`Failed to migrate product ID: ${product._id}`, err);
         failedProducts.push({
