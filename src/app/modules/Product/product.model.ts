@@ -42,13 +42,28 @@ const productSchema = new Schema<IProduct>(
       required: true,
       index: true,
     },
+    brandName: {
+      type: String,
+      required: true,
+      index: true,
+    },
     category: {
       type: Schema.Types.ObjectId,
       ref: 'Category',
       required: true,
       index: true,
     },
+    categoryName: {
+      type: String,
+      required: true,
+      index: true,
+    },
     subCategorySlug: { type: String, index: true },
+    subCategoryName: {
+      type: String,
+      required: true,
+      index: true,
+    },
     weightKg: { type: Number, required: true, min: 0.01, default: 1 },
     sellingUnit: { type: String, trim: true, default: DEFAULT_SELLING_UNIT },
     stock: { type: Number, min: 0, default: null },

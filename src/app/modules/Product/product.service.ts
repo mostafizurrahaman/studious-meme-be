@@ -396,6 +396,30 @@ const createProductIntoDB = async (
       );
     }
 
+    // Resolve Brand name from database
+    const brandDoc = await BrandModel.findById(payload.brand).lean();
+    if (!brandDoc) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Brand not found!');
+    }
+
+    // Resolve Category name from database
+    const categoryDoc = await CategoryModel.findById(payload.category).lean();
+    if (!categoryDoc) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Category not found!');
+    }
+
+    // ?? Resolve the subCategory :
+    const subCategoryDoc = categoryDoc.subCategories?.find(
+      sub => sub.slug === payload.subCategorySlug,
+    );
+
+    if (!subCategoryDoc) {
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        'Subcategory not found inside this category.',
+      );
+    }
+
     const youtubeVideoUrl = normalizeYouTubeVideoUrl(payload.youtubeVideoUrl);
     const youtubeVideoId = youtubeVideoUrl
       ? extractYouTubeVideoId(youtubeVideoUrl)
@@ -410,6 +434,9 @@ const createProductIntoDB = async (
       images,
       sellingUnit,
       ...(youtubeVideoUrl ? { youtubeVideoUrl, youtubeVideoId } : {}),
+      categoryName: categoryDoc.name,
+      subCategoryName: subCategoryDoc.name,
+      brandName: brandDoc.name,
     });
   } catch (error) {
     await Promise.all(
@@ -476,21 +503,60 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     tag,
   } = query;
 
-  // Limit and pagination:
   const currentPage = toPositiveNumber(page, 1);
   const currentLimit = toPositiveNumber(limit, 10);
   const skip = (currentPage - 1) * currentLimit;
 
   const pipeline: PipelineStage[] = [];
 
-  // Parse helper values
   const searchTermValue = getString(searchTerm);
-
   const priceValue = getString(price || p);
   const stockValue = getString(stock);
   const tagValue = getString(tag);
 
-  // 1. Exclude slug filter (Early Match)
+  if (searchTermValue) {
+    pipeline.push({
+      $search: {
+        index: 'ProductSearch',
+        compound: {
+          must: [
+            {
+              text: {
+                query: searchTermValue,
+                path: [
+                  'title',
+                  'features',
+                  'brandName',
+                  'tags',
+                  'categoryName',
+                  'subCategoryName',
+                  'sku',
+                  'description',
+                  'badge',
+                ],
+                fuzzy: { maxEdits: 1, prefixLength: 2 },
+              },
+            },
+          ],
+          filter: [
+            {
+              equals: {
+                value: true,
+                path: 'isActive',
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    pipeline.push({
+      $addFields: {
+        score: { $meta: 'searchScore' },
+      },
+    });
+  }
+
   if (excludeSlug) {
     pipeline.push({
       $match: {
@@ -501,7 +567,6 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
-  // 2. Category based filter (Early Match)
   const filterCategory = getString(category || c);
   const filterSubCategory = getString(subCategory || subCategorySlug);
   const filterBrands =
@@ -524,7 +589,6 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
-  // 3. Subcategory slug filter (Early Match)
   if (filterSubCategory) {
     pipeline.push({
       $match: {
@@ -533,7 +597,6 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
-  // 5. Price filter (Early Match)
   if (priceValue) {
     let priceQuery: Record<string, any> = {};
     if (priceValue === 'under-10000') {
@@ -559,7 +622,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     }
   }
 
-  // 6. Stock & Tag filters (Early Match)
+  //  Stock & Tag filters
   if (stockValue === 'in-stock') {
     pipeline.push({
       $match: {
@@ -602,7 +665,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
-  // Lookup Category Details:
+  // Lookup Category Details
   pipeline.push({
     $lookup: {
       from: 'categories',
@@ -644,13 +707,13 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     },
   });
 
-  // Lookup Brand Details:
+  // Lookup Brand Details
   pipeline.push({
     $lookup: {
       from: 'brands',
       localField: 'brand',
       foreignField: '_id',
-      as: 'brandDetails', // Fixed typo 'brandDeails' -> 'brandDetails'
+      as: 'brandDetails',
     },
   });
 
@@ -675,25 +738,30 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     },
   });
 
-  // Apply Sorting (Before projection cleanup & facets)
+  // সর্টিং ইমপ্লিমেন্টেশন
   const sortValue = getString(sort);
-  let sortStage: Record<string, 1 | -1> = { createdAt: -1, _id: -1 };
+  let sortStage: Record<string, any> = {};
+
   if (sortValue === 'price-asc') {
     sortStage = { price: 1, createdAt: -1, _id: -1 };
   } else if (sortValue === 'price-desc') {
     sortStage = { price: -1, createdAt: -1, _id: -1 };
   } else if (sortValue === 'oldest') {
     sortStage = { createdAt: 1, _id: 1 };
+  } else {
+    if (searchTermValue) {
+      sortStage = { score: -1 };
+    } else {
+      sortStage = { createdAt: -1, _id: -1 };
+    }
   }
 
   pipeline.push({
     $sort: sortStage,
   });
 
-  // Do the final Projection & Add Fields:
   pipeline.push({
     $addFields: {
-      // Category Fields:
       categoryId: { $ifNull: ['$categoryDetails._id', null] },
       categoryName: { $ifNull: ['$categoryDetails.name', null] },
       categorySlug: { $ifNull: ['$categoryDetails.slug', null] },
@@ -714,7 +782,6 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
         $ifNull: ['$categoryDetails.accent', null],
       },
 
-      // Subcategory Fields:
       subCategoryName: {
         $ifNull: ['$categoryDetails.subCategories.name', null],
       },
@@ -736,7 +803,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
       isSubCategoryActive: {
         $cond: {
           if: { $eq: [{ $ifNull: ['$subCategorySlug', null] }, null] },
-          then: true, // Defaults to true if the product does not have a subcategory
+          then: true,
           else: { $ifNull: ['$categoryDetails.subCategories.isActive', false] },
         },
       },
@@ -744,7 +811,6 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
         $ifNull: ['$categoryDetails.subCategories.accent', null],
       },
 
-      // Brand Details:
       brandId: { $ifNull: ['$brandDetails._id', null] },
       brandName: { $ifNull: ['$brandDetails.name', null] },
       brandImage: { $ifNull: ['$brandDetails.image', null] },
@@ -754,35 +820,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     },
   });
 
-  // 4. Search term filter (Early Match)
-  if (searchTermValue) {
-    const escapedSearch = escapeRegExp(searchTermValue);
-    const terms = escapedSearch.trim().split(/\s+/).filter(Boolean);
-    pipeline.push({
-      $match: {
-        $and: terms.map(term => ({
-          $or: [
-            'title',
-            'sku',
-            'slug',
-            'badge',
-            'features',
-            'description',
-            'brandName',
-            'brandSlug',
-            'subCategoryDescription',
-            'subCategorySlug',
-            'categorySlug',
-            'categoryName',
-          ].map(field => ({
-            [field]: { $regex: term, $options: 'i' },
-          })),
-        })),
-      },
-    });
-  }
-
-  // Special filter for category slug (if slug provided for category or c)
+  // Filter Category Slug
   if (
     filterCategory &&
     isSlug(filterCategory) &&
@@ -795,7 +833,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
-  // Brand-specific Filter
+  // Filter Brand References
   const brandFilter: PipelineStage.Match['$match'] = {
     $or: [],
   };
@@ -829,7 +867,6 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
-  // Special Category tag match (requires mapped categoryName)
   if (tagValue === 'industrial' || tagValue === 'home') {
     const pattern =
       tagValue === 'industrial'
@@ -842,7 +879,6 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
-  // Active status enforcement
   if (!includeInactive) {
     pipeline.push({
       $match: {
@@ -861,7 +897,6 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     },
   });
 
-  // Cleanup reference raw lookups
   pipeline.push({
     $project: {
       brandDetails: 0,
@@ -869,7 +904,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     },
   });
 
-  // Final Facet Stage for Paginated Results
+  // Facet pagination stage
   pipeline.push({
     $facet: {
       data: [
@@ -1013,6 +1048,41 @@ const updateProductIntoDB = async (
         normalizeSellingUnit(payload.sellingUnit) ?? DEFAULT_SELLING_UNIT;
     }
 
+    if (payload.brand !== undefined) {
+      const brandDoc = await BrandModel.findById(payload.brand).lean();
+      if (!brandDoc) {
+        throw new AppError(httpStatus.NOT_FOUND, 'Brand not found!');
+      }
+      updateSet.brandName = brandDoc?.name;
+    }
+
+    const updateCategory = payload.category ?? existingProduct.category;
+    if (payload.category !== undefined) {
+      const categoryDoc = await CategoryModel.findById(updateCategory).lean();
+      if (!categoryDoc) {
+        throw new AppError(httpStatus.NOT_FOUND, 'Category not found!');
+      }
+
+      // ?? Resolve the subCategory :
+
+      // ?? sub category slug:
+      const subCategorySlug =
+        payload.subCategorySlug ?? existingProduct.subCategorySlug;
+      const subCategoryDoc = categoryDoc.subCategories?.find(
+        sub => sub.slug === subCategorySlug,
+      );
+
+      if (!subCategoryDoc) {
+        throw new AppError(
+          httpStatus.NOT_FOUND,
+          'Subcategory not found inside this category.',
+        );
+      }
+
+      updateSet.categoryName = categoryDoc?.name;
+      updateSet.subCategoryName = subCategoryDoc?.name;
+    }
+
     const updateQuery: Record<string, unknown> = { $set: updateSet };
 
     if (shouldUpdateYoutubeVideoUrl) {
@@ -1105,34 +1175,52 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
     return { products: [], suggestions: [] };
   }
 
-  const terms = searchTerm.trim().split(/\s+/).filter(Boolean);
-  console.log(terms);
+  const terms = searchTerm.trim();
 
-  // getAllProductsFromDBNew এর সাথে মিল রেখে সার্চ ফিল্ডগুলো সাজানো হয়েছে
-  const searchableFields = [
-    'title',
-    'slug',
-    'sku',
-    'features',
-    'description',
-    'badge',
-    'brandSlug',
-    'brandName',
-    'categoryName',
-    'categorySlug',
-    'subCategoryName',
-    'subCategorySlug',
-    'subCategoryDescription',
-  ];
-
-  const searchPipeline: PipelineStage[] = [];
-  const suggestionPipeline: PipelineStage[] = [];
-
-  const lookupPipe: PipelineStage[] = [
-    {
-      $match: {
-        isActive: true,
+  const searchStage = {
+    $search: {
+      index: 'ProductSearch',
+      compound: {
+        must: [
+          {
+            text: {
+              query: terms,
+              path: [
+                'title',
+                'features',
+                'brandName',
+                'tags',
+                'categoryName',
+                'subCategoryName',
+                'sku',
+                'description',
+                'badge',
+              ],
+              fuzzy: { maxEdits: 1, prefixLength: 2 },
+            },
+          },
+        ],
+        filter: [
+          {
+            equals: {
+              value: true,
+              path: 'isActive',
+            },
+          },
+        ],
       },
+    },
+  };
+
+  const pipeline: PipelineStage[] = [
+    searchStage,
+    {
+      $addFields: {
+        score: { $meta: 'searchScore' },
+      },
+    },
+    {
+      $sort: { score: -1 },
     },
     {
       $lookup: {
@@ -1148,30 +1236,6 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
         localField: 'category',
         foreignField: '_id',
         as: 'categoryDetails',
-        let: {
-          subCategorySlug: '$subCategorySlug',
-        },
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              name: 1,
-              slug: 1,
-              isActive: 1, // অ্যাক্টিভ স্ট্যাটাস চেক করার জন্য যুক্ত করা হয়েছে
-              subCategory: {
-                $first: {
-                  $filter: {
-                    input: '$subCategories',
-                    as: 'sub',
-                    cond: {
-                      $eq: ['$$sub.slug', '$$subCategorySlug'],
-                    },
-                  },
-                },
-              },
-            },
-          },
-        ],
       },
     },
     {
@@ -1186,113 +1250,33 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
         preserveNullAndEmptyArrays: true,
       },
     },
-    // $project এর পরিবর্তে $addFields ব্যবহার করা হয়েছে যাতে sku, features, description হারিয়ে না যায়
     {
       $addFields: {
-        categoryName: { $ifNull: ['$categoryDetails.name', null] },
-        categorySlug: { $ifNull: ['$categoryDetails.slug', null] },
-        subCategoryName: {
-          $ifNull: ['$categoryDetails.subCategory.name', null],
-        },
-        subCategorySlug: {
-          $ifNull: ['$categoryDetails.subCategory.slug', null],
-        },
-        subCategoryDescription: {
-          $ifNull: ['$categoryDetails.subCategory.description', null],
-        },
-        brandName: { $ifNull: ['$brandDetails.name', null] },
-        brandSlug: { $ifNull: ['$brandDetails.slug', null] },
-
-        // অ্যাক্টিভ স্ট্যাটাস ট্র্যাক করার জন্য ফ্ল্যাগ (getAllProductsFromDBNew এর মতো)
-        isCategoryActive: { $ifNull: ['$categoryDetails.isActive', false] },
-        isSubCategoryActive: {
-          $cond: {
-            if: { $eq: [{ $ifNull: ['$subCategorySlug', null] }, null] },
-            then: true,
-            else: { $ifNull: ['$categoryDetails.subCategory.isActive', false] },
-          },
-        },
-        isBrandActive: { $ifNull: ['$brandDetails.isActive', false] },
+        brand: '$brandDetails',
+        category: '$categoryDetails',
       },
     },
-    // শুধুমাত্র অ্যাক্টিভ প্রোডাক্ট, ক্যাটাগরি ও ব্র্যান্ড ফিল্টার করা হচ্ছে
     {
-      $match: {
-        isActive: true,
-        isCategoryActive: true,
-        isSubCategoryActive: true,
-        isBrandActive: true,
+      $project: {
+        brandDetails: 0,
+        categoryDetails: 0,
       },
     },
-    // সবশেষে সার্চ ম্যাচিং করা হচ্ছে
     {
-      $match: {
-        $and: terms.map(term => ({
-          $or: searchableFields.map(field => ({
-            [field]: {
-              $regex: term,
-              $options: 'i',
-            },
-          })),
-        })),
-      },
+      $limit: limit,
     },
   ];
 
-  searchPipeline.push(...lookupPipe);
-  suggestionPipeline.push(...lookupPipe);
+  const products = await ProductModel.aggregate(pipeline);
 
-  // suggestion pipeline এর প্রসেস
-  suggestionPipeline.push({
-    $group: {
-      _id: '$title',
-      slug: { $first: '$slug' },
-    },
-  });
+  console.log({ products });
 
-  suggestionPipeline.push({
-    $limit: limit,
-  });
+  const suggestions = products.map((p: any) => ({
+    title: p.title,
+    slug: p.slug,
+  }));
 
-  suggestionPipeline.push({
-    $project: {
-      _id: 0,
-      title: '$_id',
-      slug: 1,
-    },
-  });
-
-  // search pipeline এ সর্টিং যুক্ত করা হলো (যা getAllProductsFromDBNew এর সাথে মিলবে)
-  searchPipeline.push({
-    $sort: { createdAt: -1, _id: -1 },
-  });
-
-  searchPipeline.push({
-    $limit: limit,
-  });
-
-  // সার্চের ফাইনাল আউটপুট ক্লিন রাখার জন্য প্রজেকশন
-  searchPipeline.push({
-    $project: {
-      title: 1,
-      slug: 1,
-      price: 1,
-      oldPrice: 1,
-      images: 1,
-      badge: 1,
-      sellingUnit: 1,
-      categoryName: 1,
-      categorySlug: 1,
-      subCategoryName: 1,
-      subCategorySlug: 1,
-      brandName: 1,
-      brandSlug: 1,
-    },
-  });
-
-  // সার্চ এবং সাজেশন কোয়েরি রান করা হচ্ছে
-  const products = await ProductModel.aggregate(searchPipeline);
-  const suggestions = await ProductModel.aggregate(suggestionPipeline);
+  console.log({ products, suggestions });
 
   return { products, suggestions };
 };
