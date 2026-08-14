@@ -16,8 +16,11 @@ export interface IProduct {
   youtubeVideoUrl?: string;
   youtubeVideoId?: string;
   brand: Types.ObjectId;
+  brandName: string;
   category: Types.ObjectId;
+  categoryName: string;
   subCategorySlug?: string;
+  subCategoryName?: string;
   weightKg: number;
   stock?: number | null;
   rating: number;
