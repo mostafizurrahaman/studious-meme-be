@@ -518,26 +518,121 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     pipeline.push({
       $search: {
         index: 'ProductSearch',
+
         compound: {
-          must: [
+          should: [
+            // 1. Exact phrase in title
+            {
+              phrase: {
+                query: searchTermValue,
+                path: 'title',
+                slop: 2,
+                score: {
+                  boost: {
+                    value: 15,
+                  },
+                },
+              },
+            },
+
+            // 2. Title match
             {
               text: {
                 query: searchTermValue,
-                path: [
-                  'title',
-                  'features',
-                  'brandName',
-                  'tags',
-                  'categoryName',
-                  'subCategoryName',
-                  'sku',
-                  'description',
-                  'badge',
-                ],
-                fuzzy: { maxEdits: 1, prefixLength: 2 },
+                path: 'title',
+                score: {
+                  boost: {
+                    value: 10,
+                  },
+                },
+                fuzzy: {
+                  maxEdits: 1,
+                  prefixLength: 2,
+                },
+              },
+            },
+
+            // 3. Brand
+            {
+              text: {
+                query: searchTermValue,
+                path: 'brandName',
+                score: {
+                  boost: {
+                    value: 6,
+                  },
+                },
+              },
+            },
+
+            // 4. Subcategory
+            {
+              text: {
+                query: searchTermValue,
+                path: 'subCategoryName',
+                score: {
+                  boost: {
+                    value: 5,
+                  },
+                },
+              },
+            },
+
+            // 5. Category
+            {
+              text: {
+                query: searchTermValue,
+                path: 'categoryName',
+                score: {
+                  boost: {
+                    value: 4,
+                  },
+                },
+              },
+            },
+
+            // 6. Features
+            {
+              text: {
+                query: searchTermValue,
+                path: 'features',
+                score: {
+                  boost: {
+                    value: 2,
+                  },
+                },
+              },
+            },
+
+            // 7. Tags
+            {
+              text: {
+                query: searchTermValue,
+                path: 'tags',
+                score: {
+                  boost: {
+                    value: 2,
+                  },
+                },
+              },
+            },
+
+            // 8. Description
+            {
+              text: {
+                query: searchTermValue,
+                path: 'description',
+                score: {
+                  boost: {
+                    value: 1,
+                  },
+                },
               },
             },
           ],
+
+          minimumShouldMatch: 1,
+
           filter: [
             {
               equals: {
@@ -1180,26 +1275,121 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
   const searchStage = {
     $search: {
       index: 'ProductSearch',
+
       compound: {
-        must: [
+        should: [
+          // 1. Exact phrase in title
+          {
+            phrase: {
+              query: terms,
+              path: 'title',
+              slop: 2,
+              score: {
+                boost: {
+                  value: 15,
+                },
+              },
+            },
+          },
+
+          // 2. Title match
           {
             text: {
               query: terms,
-              path: [
-                'title',
-                'features',
-                'brandName',
-                'tags',
-                'categoryName',
-                'subCategoryName',
-                'sku',
-                'description',
-                'badge',
-              ],
-              fuzzy: { maxEdits: 1, prefixLength: 2 },
+              path: 'title',
+              score: {
+                boost: {
+                  value: 10,
+                },
+              },
+              fuzzy: {
+                maxEdits: 1,
+                prefixLength: 2,
+              },
+            },
+          },
+
+          // 3. Brand
+          {
+            text: {
+              query: terms,
+              path: 'brandName',
+              score: {
+                boost: {
+                  value: 6,
+                },
+              },
+            },
+          },
+
+          // 4. Subcategory
+          {
+            text: {
+              query: terms,
+              path: 'subCategoryName',
+              score: {
+                boost: {
+                  value: 5,
+                },
+              },
+            },
+          },
+
+          // 5. Category
+          {
+            text: {
+              query: terms,
+              path: 'categoryName',
+              score: {
+                boost: {
+                  value: 4,
+                },
+              },
+            },
+          },
+
+          // 6. Features
+          {
+            text: {
+              query: terms,
+              path: 'features',
+              score: {
+                boost: {
+                  value: 2,
+                },
+              },
+            },
+          },
+
+          // 7. Tags
+          {
+            text: {
+              query: terms,
+              path: 'tags',
+              score: {
+                boost: {
+                  value: 2,
+                },
+              },
+            },
+          },
+
+          // 8. Description
+          {
+            text: {
+              query: terms,
+              path: 'description',
+              score: {
+                boost: {
+                  value: 1,
+                },
+              },
             },
           },
         ],
+
+        minimumShouldMatch: 1,
+
         filter: [
           {
             equals: {
