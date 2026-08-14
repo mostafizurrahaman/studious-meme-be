@@ -89,7 +89,7 @@ import config from './app/config';
 import seedSuperAdmin from './app/seed';
 import colors from 'colors';
 import dns from 'node:dns';
-import { migrateProductBrandCategoryNames } from './app/modules/Product/products.migration';
+
 
 dns.setServers(['1.1.1.1']);
 
