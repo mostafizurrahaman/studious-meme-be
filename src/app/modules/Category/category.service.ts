@@ -6,7 +6,8 @@ import { ICategory, ISubCategoryItem } from './category.interface';
 import { MulterFile } from '../../lib/upload';
 
 import { TGetAllSubCategoriesQueryType } from './category.validation';
-import { PipelineStage, Types } from 'mongoose';
+import mongoose, { PipelineStage, Types } from 'mongoose';
+import { ProductModel } from '../Product/product.model';
 
 // 1. createCategoryIntoDB
 const createCategoryIntoDB = async (
@@ -174,14 +175,32 @@ const updateCategorySubCategoryIntoDB = async (
   const previousImage = item.image;
   let uploadedImage: string | undefined;
 
+  const session = await mongoose.startSession();
+
   try {
+    session.startTransaction();
+
     if (imageFile) {
       const { secure_url } = await sendImageToCloudinary(imageFile);
       uploadedImage = secure_url;
     }
 
     Object.assign(item, payload, uploadedImage ? { image: uploadedImage } : {});
-    const saved = await category.save();
+    const saved = await category.save({ session });
+
+    if (payload.name || payload.slug) {
+      const updateData: Record<string, unknown> = {};
+      if (payload.name) updateData.subCategoryName = payload.name;
+      if (payload.slug) updateData.subCategorySlug = payload.slug;
+
+      await ProductModel.updateMany(
+        { subCategorySlug: subCategorySlug },
+        updateData,
+        { session },
+      );
+    }
+
+    await session.commitTransaction();
 
     if (uploadedImage && previousImage && previousImage !== uploadedImage) {
       await deleteImageFromCloudinary(previousImage);
@@ -189,11 +208,14 @@ const updateCategorySubCategoryIntoDB = async (
 
     return saved;
   } catch (error) {
+    await session.abortTransaction();
     if (uploadedImage) {
       await deleteImageFromCloudinary(uploadedImage);
     }
 
     throw error;
+  } finally {
+    await session.endSession();
   }
 };
 
