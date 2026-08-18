@@ -17,6 +17,7 @@ import { ProductQuestionRoutes } from '../modules/ProductQuestion/productQuestio
 import { ProductQuestionAdminRoutes } from '../modules/ProductQuestion/productQuestion.admin.routes';
 import { ProductReviewRoutes } from '../modules/ProductReview/productReview.routes';
 import { ProductReviewAdminRoutes } from '../modules/ProductReview/productReview.admin.routes';
+import { testRoutes } from '../modules/test/test.route';
 
 const router = Router();
 
@@ -93,8 +94,12 @@ const moduleRoutes = [
     path: '/contact',
     route: ContactRoutes,
   },
+  {
+    path: '/test',
+    route: testRoutes,
+  },
 ];
 
-moduleRoutes.forEach((route) => router.use(route.path, route.route));
+moduleRoutes.forEach(route => router.use(route.path, route.route));
 
 export default router;

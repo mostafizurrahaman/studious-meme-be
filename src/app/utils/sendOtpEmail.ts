@@ -24,10 +24,10 @@ const sendOtpEmail = async ({
   try {
     // Create a transporter for sending emails
     const transporter = nodemailer.createTransport({
-      // host: 'smtp.gmail.com',
-      // port: 587,
-      // secure: false, // true for 465, false for other ports
-      service: 'gmail',
+      host: config.nodemailer.host,
+      port: 465,
+      secure: true, // true for 465, false for other ports
+      // service: 'gmail',
       auth: {
         user: config.nodemailer.email,
         pass: config.nodemailer.password,
