@@ -58,7 +58,9 @@ const sendOrderConfirmationEmail = async (
 ) => {
   try {
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: config.nodemailer.host,
+      port: 465,
+      secure: true,
       auth: {
         user: config.nodemailer.email,
         pass: config.nodemailer.password,

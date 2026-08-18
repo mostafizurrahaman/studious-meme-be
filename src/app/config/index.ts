@@ -17,7 +17,7 @@ export default {
   NODE_ENV: process.env.NODE_ENV,
   contact_us_email: process.env.CONTACT_US_EMAIL,
   allowed_origins: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map((origin) =>
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin =>
         origin.trim().replace(/^['"]|['"]$/g, ''),
       )
     : [],
@@ -52,6 +52,7 @@ export default {
   nodemailer: {
     email: process.env.EMAIL_FOR_NODEMAILER,
     password: process.env.PASSWORD_FOR_NODEMAILER,
+    host: process.env.EMAIL_HOST_FOR_NODEMAILER,
   },
 
   superAdmin: {
