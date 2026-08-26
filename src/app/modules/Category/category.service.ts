@@ -122,8 +122,40 @@ const updateCategoryIntoDB = async (
 };
 
 // 5. deleteCategoryFromDB
-const deleteCategoryFromDB = async (slug: string) =>
-  CategoryModel.findOneAndDelete({ slug });
+const deleteCategoryFromDB = async (slug: string) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const deletedCategory = await CategoryModel.findOneAndDelete(
+      { slug },
+      { session },
+    );
+
+    if (!deletedCategory) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Category not found.');
+    }
+
+    await ProductModel.deleteMany(
+      {
+        category: deletedCategory._id,
+      },
+      {
+        session,
+      },
+    );
+
+    await session.commitTransaction();
+
+    return deletedCategory;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
 
 // 6. createCategorySubCategoryIntoDB
 const createCategorySubCategoryIntoDB = async (
@@ -225,15 +257,54 @@ const deleteCategorySubCategoryFromDB = async (
   subCategorySlug: string,
 ) => {
   const category = await CategoryModel.findOne({ slug: categorySlug });
-  if (!category)
+  if (!category) {
     throw new AppError(httpStatus.NOT_FOUND, 'Category not found!');
-  const next = category.subCategories.filter(
+  }
+
+  const otherSubCategories = category.subCategories.filter(
     item => item.slug !== subCategorySlug,
   );
-  if (next.length === category.subCategories.length)
+
+  if (otherSubCategories.length === category.subCategories.length) {
     throw new AppError(httpStatus.NOT_FOUND, 'Subcategory not found!');
-  category.subCategories = next;
-  return category.save();
+  }
+
+  const mongoSession = await mongoose.startSession();
+
+  try {
+    mongoSession.startTransaction();
+
+    category.subCategories = otherSubCategories;
+
+    const result = await category.save({ session: mongoSession });
+
+    if (!result) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        'Failed to delete sub category.',
+      );
+    }
+
+    // ?? Delete products which are associated with this sub categories:
+    await ProductModel.deleteMany(
+      {
+        category: category?._id,
+        subCategorySlug: subCategorySlug,
+      },
+      {
+        session: mongoSession,
+      },
+    );
+
+    await mongoSession.commitTransaction();
+
+    return result;
+  } catch (error) {
+    await mongoSession.abortTransaction();
+    throw error;
+  } finally {
+    await mongoSession.endSession();
+  }
 };
 
 //
