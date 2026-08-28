@@ -81,6 +81,10 @@ const getActiveProduct = asyncHandler(async (req, res) => {
 
 // 5. updateProduct
 const updateProduct = asyncHandler(async (req, res) => {
+  console.log('----META ----', {
+    metaTitle: req.body.metaTitle,
+    metaDescription: req.body.metaDescription,
+  });
   const result = await ProductService.updateProductIntoDB(
     encodeURI(getParam(req.params.slug)),
     req.body,

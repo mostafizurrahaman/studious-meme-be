@@ -31,6 +31,12 @@ const productSchema = new Schema<IProduct>(
       type: String,
       required: [true, 'Description is required!'],
     },
+    metaTitle: {
+      type: String,
+    },
+    metaDescription: {
+      type: String,
+    },
     price: { type: Number, required: true, min: 0 },
     oldPrice: { type: Number, min: 0 },
     badge: { type: String },

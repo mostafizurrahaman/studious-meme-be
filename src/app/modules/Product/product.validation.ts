@@ -84,6 +84,8 @@ const productBaseSchema = z.object({
     .string({ error: 'Description is required!' })
     .trim()
     .min(1, { message: 'Description is required!' }),
+  metaTitle: z.string().optional(),
+  metaDescription: z.string().optional(),
   price: z.coerce
     .number({ error: 'Price is required!' })
     .min(0, { message: 'Price is required!' }),
