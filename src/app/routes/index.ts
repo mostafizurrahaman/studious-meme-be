@@ -18,6 +18,7 @@ import { ProductQuestionAdminRoutes } from '../modules/ProductQuestion/productQu
 import { ProductReviewRoutes } from '../modules/ProductReview/productReview.routes';
 import { ProductReviewAdminRoutes } from '../modules/ProductReview/productReview.admin.routes';
 import { testRoutes } from '../modules/test/test.route';
+import { AddressRoutes } from '../modules/Address/address.routes';
 
 const router = Router();
 
@@ -97,6 +98,10 @@ const moduleRoutes = [
   {
     path: '/test',
     route: testRoutes,
+  },
+  {
+    path: '/address',
+    route: AddressRoutes,
   },
 ];
 
