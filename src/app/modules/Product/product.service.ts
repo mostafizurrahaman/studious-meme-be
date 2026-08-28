@@ -835,6 +835,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
 
   // সর্টিং ইমপ্লিমেন্টেশন
   const sortValue = getString(sort);
+  // eslint-disable-next-line no-useless-assignment
   let sortStage: Record<string, any> = {};
 
   if (sortValue === 'price-asc') {
@@ -912,6 +913,10 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
       brandSlug: { $ifNull: ['$brandDetails.slug', null] },
       brandDescription: { $ifNull: ['$brandDetails.description', null] },
       isBrandActive: { $ifNull: ['$brandDetails.isActive', false] },
+
+      // ?? --------------- Customer Name: --------------
+      metaTitle: { $ifNull: ['$metaTitle', null] },
+      metaDescription: { $ifNull: ['$metaDescription', null] },
     },
   });
 
@@ -1035,6 +1040,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     },
   };
 };
+
 // 3. getAllActiveProductsFromDB
 // const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
 //   getAllProductsFromDB({ ...query, includeInactive: undefined });

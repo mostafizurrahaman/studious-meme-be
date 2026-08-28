@@ -10,6 +10,8 @@ export interface IProduct {
   imageAlt: string[];
   features: string;
   description: string;
+  metaTitle?: string;
+  metaDescription?: string;
   price: number;
   oldPrice?: number;
   badge?: string;
