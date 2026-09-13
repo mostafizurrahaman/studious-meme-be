@@ -1463,10 +1463,10 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
       $limit: limit,
     },
   ];
-  console.time('PRODUCT_SEARCH');
+  console.time(`PRODUCT_SEARCH_${terms}`);
   const products = await ProductModel.aggregate(pipeline);
 
-  console.timeEnd('PRODUCT_SEARCH');
+  console.timeEnd(`PRODUCT_SEARCH_${terms}`);
 
   const suggestions = products.map((p: any) => ({
     title: p.title,
