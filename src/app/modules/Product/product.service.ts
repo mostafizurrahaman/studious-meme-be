@@ -1022,10 +1022,10 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
       ],
     },
   });
-  console.time('PRODUCT_SEARCH');
+  console.time('PRODUCT_SEARCH_NEW');
   const result = await ProductModel.aggregate(pipeline);
 
-  console.timeEnd('PRODUCT_SEARCH');
+  console.timeEnd('PRODUCT_SEARCH_NEW');
   const data = result?.[0]?.data;
   const total = result?.[0]?.meta?.[0]?.total || 0;
 
