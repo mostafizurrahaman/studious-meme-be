@@ -127,4 +127,5 @@ export default {
     frontend_app: process.env.FRONTEND_APP_URL,
     backend_public: process.env.BACKEND_PUBLIC_URL,
   },
+  otpToken: process.env.OTP_TOKEN,
 };
