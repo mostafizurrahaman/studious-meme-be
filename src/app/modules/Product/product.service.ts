@@ -617,18 +617,18 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
               },
             },
 
-            // 8. Description
-            {
-              text: {
-                query: searchTermValue,
-                path: 'description',
-                score: {
-                  boost: {
-                    value: 1,
-                  },
-                },
-              },
-            },
+            // // 8. Description
+            // {
+            //   text: {
+            //     query: searchTermValue,
+            //     path: 'description',
+            //     score: {
+            //       boost: {
+            //         value: 1,
+            //       },
+            //     },
+            //   },
+            // },
           ],
 
           minimumShouldMatch: 1,
@@ -1382,17 +1382,17 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
           },
 
           // 8. Description
-          {
-            text: {
-              query: terms,
-              path: 'description',
-              score: {
-                boost: {
-                  value: 1,
-                },
-              },
-            },
-          },
+          // {
+          //   text: {
+          //     query: terms,
+          //     path: 'description',
+          //     score: {
+          //       boost: {
+          //         value: 1,
+          //       },
+          //     },
+          //   },
+          // },
         ],
 
         minimumShouldMatch: 1,
