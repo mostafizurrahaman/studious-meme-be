@@ -1490,8 +1490,21 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
     },
     {
       $project: {
-        brandDetails: 0,
-        categoryDetails: 0,
+        title: 1,
+        slug: 1,
+        images: 1,
+        imageAlt: 1,
+        price: 1,
+        oldPrice: 1,
+        badge: 1,
+        rating: 1,
+        brandName: '$brandName',
+        categoryName: '$categoryName',
+        subCategoryName: '$subCategoryName',
+        stock: 1,
+        isNoCOD: 1,
+        // brandDetails: 0,
+        // categoryDetails: 0,
       },
     },
   ];
