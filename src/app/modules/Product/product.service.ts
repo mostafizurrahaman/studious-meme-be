@@ -1433,9 +1433,41 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
     {
       $lookup: {
         from: 'categories',
-        localField: 'category',
-        foreignField: '_id',
+        let: {
+          categoryId: '$category',
+          productSubCategorySlug: '$subCategorySlug',
+        },
         as: 'categoryDetails',
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ['$_id', '$$categoryId'],
+              },
+            },
+          },
+          {
+            $project: {
+              name: 1,
+              image: 1,
+              slug: 1,
+              accent: 1,
+              description: 1,
+              metaTitle: 1,
+              metaDescription: 1,
+              isActive: true,
+              subCategories: {
+                $filter: {
+                  input: '$subCategories',
+                  as: 'subCategory',
+                  cond: {
+                    $eq: ['$$subCategory.slug', '$$productSubCategorySlug'],
+                  },
+                },
+              },
+            },
+          },
+        ],
       },
     },
     {
@@ -1463,10 +1495,8 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
       },
     },
   ];
-  console.time(`PRODUCT_SEARCH_${terms}`);
-  const products = await ProductModel.aggregate(pipeline);
 
-  console.timeEnd(`PRODUCT_SEARCH_${terms}`);
+  const products = await ProductModel.aggregate(pipeline);
 
   const suggestions = products.map((p: any) => ({
     title: p.title,
