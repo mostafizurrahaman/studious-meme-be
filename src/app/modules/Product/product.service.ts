@@ -1022,9 +1022,10 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
       ],
     },
   });
-
+  console.time('PRODUCT_SEARCH_NEW');
   const result = await ProductModel.aggregate(pipeline);
 
+  console.timeEnd('PRODUCT_SEARCH_NEW');
   const data = result?.[0]?.data;
   const total = result?.[0]?.meta?.[0]?.total || 0;
 
@@ -1462,8 +1463,10 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
       $limit: limit,
     },
   ];
-
+  console.time('PRODUCT_SEARCH');
   const products = await ProductModel.aggregate(pipeline);
+
+  console.timeEnd('PRODUCT_SEARCH');
 
   const suggestions = products.map((p: any) => ({
     title: p.title,
