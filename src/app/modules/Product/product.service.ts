@@ -1420,6 +1420,9 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
       $sort: { score: -1 },
     },
     {
+      $limit: limit,
+    },
+    {
       $lookup: {
         from: 'brands',
         localField: 'brand',
@@ -1458,9 +1461,6 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
         brandDetails: 0,
         categoryDetails: 0,
       },
-    },
-    {
-      $limit: limit,
     },
   ];
   console.time(`PRODUCT_SEARCH_${terms}`);
