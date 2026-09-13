@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+
   workflow_dispatch:
 
 concurrency:
@@ -15,100 +16,120 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ১. রানারের ভার্চুয়াল মেশিনে কোড নিয়ে আসা
+      # 1. Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ২. রানারে Node.js সেটআপ করা
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      # ৩. রানারে pnpm সেটআপ করা
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      # ৪. রানারে ডিপেন্ডেন্সি ইন্সটল করা (টেস্ট করার জন্য প্রয়োজন)
+      # 3. Install dependencies
       - name: Install dependencies on runner
-        run: pnpm install
+        run: npm ci
 
-      # ৫. রানারে টেস্ট এবং বিল্ড চেক (VPS-এ পাঠানোর আগে নিশ্চিত হওয়া)
+      # 4. Run tests and build check
       - name: Run Tests and Build Check
         run: |
-          pnpm test
-          pnpm build
+          npm test
+          npm run build
 
-      # ৬. টেস্ট পাস হলে তবেই কেবল SSH-এর মাধ্যমে VPS-এ ডিপ্লয়মেন্ট শুরু হবে
+      # 5. Deploy to VPS
       - name: Deploy over SSH
-        if: success() # আগের ধাপগুলো সফল হলেই এটি চলবে
+        if: success()
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+
           script: |
-            # এরর হলে স্ক্রিপ্ট থামিয়ে দেওয়ার জন্য
             set -euo pipefail
 
             echo "==> Variables declaration"
-            # ভ্যারিয়েবল ডিক্লেয়ারেশন
+
             APP_DIR="/var/www/MalaMal_APIs"
             APP_NAME="malamal-apis"
 
             echo "==> Updating system packages"
+
             sudo apt update -y
             sudo apt install -y git curl
 
-            echo "==> Checking/Installing pnpm and pm2"
-            if ! command -v pnpm >/dev/null 2>&1; then sudo npm install -g pnpm; fi
-            if ! command -v pm2 >/dev/null 2>&1; then sudo npm install -g pm2; fi
+            echo "==> Checking Node.js"
+
+            if ! command -v node >/dev/null 2>&1; then
+              echo "Node.js is not installed."
+              exit 1
+            fi
+
+            echo "Node version:"
+            node -v
+
+            echo "NPM version:"
+            npm -v
+
+            echo "==> Checking/Installing PM2"
+
+            if ! command -v pm2 >/dev/null 2>&1; then
+              sudo npm install -g pm2
+            fi
 
             echo "==> Preparing app directory"
+
             sudo mkdir -p "$APP_DIR"
-            sudo chown -R $USER:$USER "$APP_DIR"
-            cd "$APP_DIR" || exit
+            sudo chown -R "$USER:$USER" "$APP_DIR"
+
+            cd "$APP_DIR" || exit 1
 
             echo "==> Updating source code"
+
             if [ ! -d ".git" ]; then
-            git clone -b main "${{ secrets.REPO_URL }}" .
+              git clone -b main "${{ secrets.REPO_URL }}" .
             else
-                if git remote get-url origin >/dev/null 2>&1; then
-                  git remote set-url origin "${{ secrets.REPO_URL }}"
-                else
-                  git remote add origin "${{ secrets.REPO_URL }}"
-                fi
-                git fetch origin main
-                git reset --hard origin/main
-                git clean -fd
+              if git remote get-url origin >/dev/null 2>&1; then
+                git remote set-url origin "${{ secrets.REPO_URL }}"
+              else
+                git remote add origin "${{ secrets.REPO_URL }}"
+              fi
+
+              git fetch origin main
+              git reset --hard origin/main
+              git clean -fd
             fi
 
             echo "==> Creating .env file"
+
             cat <<EOF > .env
             ${{ secrets.ENV_FILE }}
             EOF
 
-            echo "==> Cleaning old build and installing dependencies"
-            # rm -rf dist node_modules
-            pnpm install --frozen-lockfile
+            echo "==> Installing dependencies"
+
+            npm ci
 
             echo "==> Building Backend app"
-            pnpm build
+
+            npm run build
 
             echo "==> Starting/Reloading with PM2"
-            pm2 describe $APP_NAME > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
+
+            if pm2 describe "$APP_NAME" > /dev/null 2>&1; then
               echo "App is already running. Reloading PM2 process..."
-              pm2 reload $APP_NAME
+
+              pm2 reload "$APP_NAME"
             else
               echo "App is not running. Starting new PM2 process..."
-              # NestJS এর জন্য বিল্ড ফাইল সাধারণত dist/main.js হয়, আপনার ExpressJS এর জন্য server.js হলে সেটিই থাকবে
+
               pm2 start dist/server.js --name "$APP_NAME"
             fi
 
             pm2 save
+
             echo "==> Backend deploy success without Nginx changes!"
+
             pm2 status
