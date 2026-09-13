@@ -20,24 +20,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Setup Node.js
+      # 2. Setup Node.js with npm caching
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24.15.0'
+          node-version: '24.x'
           cache: 'npm'
+          cache-dependency-path: package-lock.json
 
-      # 3. Install dependencies
-      - name: Install dependencies on runner
+      # 3. Install dependencies (clean install from lock file)
+      - name: Install dependencies
         run: npm ci
 
-      # 4. Run tests and build check
-      - name: Run Tests and Build Check
-        run: |
-          npm test
-          npm run build
+      # 4. Type check
+      - name: Type Check
+        run: npm run type-check
 
-      # 5. Deploy to VPS
+      # 5. Run tests
+      - name: Run Tests
+        run: npm test
+
+      # 6. Build
+      - name: Build
+        run: npm run build
+
+      # 7. Deploy to VPS over SSH
       - name: Deploy over SSH
         if: success()
         uses: appleboy/ssh-action@v1.2.0
@@ -62,7 +69,7 @@ jobs:
 
             echo "==> Checking Node.js"
 
-            if ! command -v node >/dev/null 2>&1; then
+            if ! command -v node > /dev/null 2>&1; then
               echo "Node.js is not installed."
               exit 1
             fi
@@ -75,7 +82,7 @@ jobs:
 
             echo "==> Checking/Installing PM2"
 
-            if ! command -v pm2 >/dev/null 2>&1; then
+            if ! command -v pm2 > /dev/null 2>&1; then
               sudo npm install -g pm2
             fi
 
@@ -91,7 +98,7 @@ jobs:
             if [ ! -d ".git" ]; then
               git clone -b main "${{ secrets.REPO_URL }}" .
             else
-              if git remote get-url origin >/dev/null 2>&1; then
+              if git remote get-url origin > /dev/null 2>&1; then
                 git remote set-url origin "${{ secrets.REPO_URL }}"
               else
                 git remote add origin "${{ secrets.REPO_URL }}"
