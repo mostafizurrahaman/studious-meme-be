@@ -49,6 +49,20 @@ const getActiveCategoriesFromDB = async () =>
       })),
     );
 
+// 3.5. getCategoryOptionsFromDB
+const getCategoryOptionsFromDB = async () =>
+  CategoryModel.find({ isActive: true })
+    .select('_id name slug subCategories.slug subCategories.name subCategories.isActive')
+    .sort({ name: 1 })
+    .lean()
+    .then(categories =>
+      categories.map(category => ({
+        ...category,
+        subCategories:
+          category.subCategories?.filter(item => item.isActive !== false) ?? [],
+      })),
+    );
+
 // 3. getCategoryBySlugFromDB
 const getCategoryBySlugFromDB = async (slug: string) => {
   const doc = await CategoryModel.findOne({ slug }).lean();
@@ -588,4 +602,5 @@ export const CategoryService = {
   deleteCategorySubCategoryFromDB,
   getAllSubCategories,
   getSubCategoryBySlug,
+  getCategoryOptionsFromDB,
 };

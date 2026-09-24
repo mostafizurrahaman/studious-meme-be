@@ -72,4 +72,12 @@ router
 // 5. search products with keyword suggestions
 router.route('/search').get(publicLimiter, ProductController.searchProducts);
 
+router
+  .route('/:id/admin')
+  .get(
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    adminLimiter,
+    ProductController.getProductDetailsForAdmin,
+  );
+
 export const ProductRoutes = router;

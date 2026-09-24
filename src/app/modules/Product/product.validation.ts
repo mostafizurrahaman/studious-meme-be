@@ -292,6 +292,38 @@ const getProductsQueryValidationSchema = z.object({
         error: 'includeInactive must be a boolean value.',
       })
       .optional(),
+    isAdminPanel: z.union(
+      [
+        z
+          .string({
+            error: 'Is Admin Panel should be true or false',
+          })
+          .refine(value => {
+            if (value === 'true') return true;
+            if (value === 'false') return true;
+            return false;
+          })
+          .transform((val, ctx) => {
+            if (val.trim().toLowerCase() === 'true') {
+              return true;
+            }
+            if (val.trim().toLowerCase() === 'false') {
+              return false;
+            }
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Invalid boolean value',
+            });
+            return z.NEVER;
+          }),
+        z
+          .boolean({
+            error: 'Admin Panel should be true or false',
+          })
+          .default(false),
+      ],
+      { error: 'Admin Panel should be true or false' },
+    ),
   }),
 });
 

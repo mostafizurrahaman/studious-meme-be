@@ -31,6 +31,9 @@ router
   .route('/brands/active')
   .get(publicLimiter, BrandController.getActiveBrands);
 router
+  .route('/options')
+  .get(publicLimiter, BrandController.getBrandOptions);
+router
   .route('/brands/active/:slug')
   .get(publicLimiter, BrandController.getActiveBrand);
 

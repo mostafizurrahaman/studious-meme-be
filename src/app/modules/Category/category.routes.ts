@@ -32,6 +32,9 @@ router
   .route('/categories/active')
   .get(publicLimiter, CategoryController.getActiveCategories);
 router
+  .route('/options')
+  .get(publicLimiter, CategoryController.getCategoryOptions);
+router
   .route('/categories/active/:slug')
   .get(publicLimiter, CategoryController.getActiveCategory);
 
