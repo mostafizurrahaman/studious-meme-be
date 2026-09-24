@@ -63,6 +63,17 @@ const getActiveCategory = asyncHandler(async (req, res) => {
   });
 });
 
+// 5.5. getCategoryOptions
+const getCategoryOptions = asyncHandler(async (_req, res) => {
+  const result = await CategoryService.getCategoryOptionsFromDB();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    message: 'Category options fetched successfully!',
+    data: result,
+  });
+});
+
 // 4. updateCategory
 const updateCategory = asyncHandler(async (req, res) => {
   const result = await CategoryService.updateCategoryIntoDB(
@@ -181,4 +192,5 @@ export const CategoryController = {
   deleteCategorySubCategory,
   getAllSubCategories,
   getSubCategoryBySlug,
+  getCategoryOptions,
 };

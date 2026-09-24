@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { UserRoutes } from '../modules/User/user.route';
 import { AdminRoutes } from '../modules/Admin/admin.routes';
+import { DashboardRoutes } from '../modules/Dashboard/dashboard.routes';
 import { ComparisonHistoryRoutes } from '../modules/ComparisonHistory/comparisonHistory.routes';
 import { PaymentRoutes } from '../modules/Payment/payment.routes';
 import { PageRoutes } from '../modules/Page/page.route';
@@ -102,6 +103,10 @@ const moduleRoutes = [
   {
     path: '/address',
     route: AddressRoutes,
+  },
+  {
+    path: '/dashboard',
+    route: DashboardRoutes,
   },
 ];
 

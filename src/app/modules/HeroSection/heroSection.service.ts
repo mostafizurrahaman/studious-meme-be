@@ -12,14 +12,14 @@ const getHeroSectionImages = (
   heroSection: Pick<IHeroSection, 'slides' | 'features'>,
 ) =>
   [...(heroSection.slides || []), ...(heroSection.features || [])]
-    .map((card) => card.image)
+    .map(card => card.image)
     .filter(Boolean);
 
 const deleteHeroSectionImages = async (
   heroSection: Pick<IHeroSection, 'slides' | 'features'>,
 ) => {
   await Promise.all(
-    getHeroSectionImages(heroSection).map((image) =>
+    getHeroSectionImages(heroSection).map(image =>
       deleteImageFromCloudinary(image),
     ),
   );
@@ -37,10 +37,10 @@ const keepOnlyLatestHeroSection = async () => {
   const [latest, ...duplicates] = heroSections;
 
   await Promise.all(
-    duplicates.map((heroSection) => deleteHeroSectionImages(heroSection)),
+    duplicates.map(heroSection => deleteHeroSectionImages(heroSection)),
   );
   await HeroSectionModel.deleteMany({
-    _id: { $in: duplicates.map((heroSection) => heroSection._id) },
+    _id: { $in: duplicates.map(heroSection => heroSection._id) },
   });
 
   return latest;
@@ -57,15 +57,15 @@ const HOME_CATEGORY_FIELDS =
 const HOME_PRODUCT_FIELDS =
   'title slug sku images price oldPrice badge sellingUnit brand category stock rating isFeatured isNoCOD weightKg createdAt';
 const HOME_PRODUCT_POPULATE = [
-  { path: 'brand', select: 'name slug' },
-  { path: 'category', select: 'name slug' },
+  { path: 'brand', select: 'name slug', match: { isActive: true } },
+  { path: 'category', select: 'name slug', match: { isActive: true } },
 ];
 
 // 1. ensureHeroSectionImages
 const ensureHeroSectionImages = (payload: Partial<IHeroSection>) => {
   const cards = [...(payload.slides || []), ...(payload.features || [])];
 
-  const missing = cards.some((card) => !card.image);
+  const missing = cards.some(card => !card.image);
 
   if (missing) {
     throw new AppError(
@@ -79,14 +79,9 @@ const ensureHeroSectionImages = (payload: Partial<IHeroSection>) => {
 const getHomeContentFromDB = async (query: Record<string, unknown> = {}) => {
   const brandLimit = getPositiveLimit(query.brandLimit);
   const categoryLimit = getPositiveLimit(query.categoryLimit);
-  const [activeBrandIds, activeCategoryIds] = await Promise.all([
-    BrandModel.find({ isActive: true }).distinct('_id'),
-    CategoryModel.find({ isActive: true }).distinct('_id'),
-  ]);
+  console.log(categoryLimit ?? 10);
   const activeProductFilter = {
     isActive: true,
-    brand: { $in: activeBrandIds },
-    category: { $in: activeCategoryIds },
   };
 
   const [heroSection, brands, categories, featuredProducts, latestProducts] =
@@ -97,23 +92,72 @@ const getHomeContentFromDB = async (query: Record<string, unknown> = {}) => {
         .sort({ name: 1 })
         .limit(brandLimit ?? 0)
         .lean(),
-      CategoryModel.find({ isActive: true })
-        .select(HOME_CATEGORY_FIELDS)
-        .sort({ name: 1 })
-        .limit(categoryLimit ?? 0)
-        .lean(),
+      // CategoryModel.find({ isActive: true })
+      //   .select(HOME_CATEGORY_FIELDS)
+      //   .sort({ name: 1 })
+      //   .limit(categoryLimit ?? 0)
+      //   .lean(),
+      CategoryModel.aggregate([
+        {
+          $match: {
+            isActive: true,
+          },
+        },
+        {
+          $project: {
+            _id: '$_id',
+            name: '$name',
+            slug: '$slug',
+            image: { $ifNull: ['$image', null] },
+            description: { $ifNull: ['$description', null] },
+            accent: {
+              $ifNull: ['$accent', null],
+            },
+            metaTitle: { $ifNull: ['$metaTitle', null] },
+            metaDescription: { $ifNull: ['$metaDescription', null] },
+            imageAlt: { $ifNull: ['$imageAlt', null] },
+            subCategories: {
+              $map: {
+                input: '$subCategories',
+                as: 'subCategory',
+                in: {
+                  id: '$$subCategory._id',
+                  name: '$$subCategory.name',
+                  slug: '$$subCategory.slug',
+                  metaTitle: '$$subCategory.metaTitle',
+                  metaDescription: '$$subCategory.metaDescription',
+                },
+              },
+            },
+          },
+        },
+        {
+          $sort: {
+            name: -1,
+          },
+        },
+        {
+          $limit: categoryLimit || 10,
+        },
+      ]),
       ProductModel.find({ ...activeProductFilter, isFeatured: true })
         .select(HOME_PRODUCT_FIELDS)
         .populate(HOME_PRODUCT_POPULATE)
         .sort({ updatedAt: -1 })
-        .limit(10)
-        .lean(),
+        .limit(30)
+        .lean()
+        .then(docs =>
+          docs.filter((p: any) => p.brand && p.category).slice(0, 10),
+        ),
       ProductModel.find(activeProductFilter)
         .select(HOME_PRODUCT_FIELDS)
         .populate(HOME_PRODUCT_POPULATE)
         .sort({ createdAt: -1 })
-        .limit(20)
-        .lean(),
+        .limit(50)
+        .lean()
+        .then(docs =>
+          docs.filter((p: any) => p.brand && p.category).slice(0, 20),
+        ),
     ]);
 
   return {
@@ -177,9 +221,9 @@ const createHeroSectionIntoDB = async (
   await Promise.all(
     previousImages
       .filter(
-        (image) => !getHeroSectionImages(updated.toObject()).includes(image),
+        image => !getHeroSectionImages(updated.toObject()).includes(image),
       )
-      .map((image) => deleteImageFromCloudinary(image)),
+      .map(image => deleteImageFromCloudinary(image)),
   );
   await keepOnlyLatestHeroSection();
 
@@ -241,8 +285,8 @@ const updateHeroSectionIntoDB = async (
     const nextImages = getHeroSectionImages(updated.toObject());
     await Promise.all(
       previousImages
-        .filter((image) => !nextImages.includes(image))
-        .map((image) => deleteImageFromCloudinary(image)),
+        .filter(image => !nextImages.includes(image))
+        .map(image => deleteImageFromCloudinary(image)),
     );
 
     await keepOnlyLatestHeroSection();
@@ -254,13 +298,13 @@ const updateHeroSectionIntoDB = async (
         ...(updatedPayload.slides || []),
         ...(updatedPayload.features || []),
       ]
-        .map((card) => card.image)
+        .map(card => card.image)
         .filter(Boolean);
       const newImages = nextImages.filter(
-        (image) => !previousImages.includes(image),
+        image => !previousImages.includes(image),
       );
       await Promise.all(
-        newImages.map((image) => deleteImageFromCloudinary(image)),
+        newImages.map(image => deleteImageFromCloudinary(image)),
       );
     }
 

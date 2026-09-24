@@ -163,6 +163,18 @@ const searchProducts = asyncHandler(async (req, res) => {
   });
 });
 
+const getProductDetailsForAdmin = asyncHandler(async (req, res) => {
+  const result = await ProductService.getProductDetailsForAdmin(
+    req.params.id as string,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    message: 'Product details retrieved successfully.',
+    data: result,
+  });
+});
+
 export const ProductController = {
   createProduct,
   getAllProducts,
@@ -177,4 +189,5 @@ export const ProductController = {
 
   // New Apies:
   getAllProductsNew,
+  getProductDetailsForAdmin,
 };

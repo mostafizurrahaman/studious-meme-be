@@ -501,6 +501,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     subCategory,
     subCategorySlug,
     tag,
+    isAdminPanel,
   } = query;
 
   const currentPage = toPositiveNumber(page, 1);
@@ -1004,6 +1005,33 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     },
   });
 
+  if (isAdminPanel) {
+    pipeline.push({
+      $project: {
+        description: 0,
+        features: 0,
+        metaTitle: 0,
+        metaDescription: 0,
+        youtubeVideoUrl: 0,
+        youtubeVideoId: 0,
+        brandDescription: 0,
+        categoryDescription: 0,
+        subCategoryDescription: 0,
+        categoryMetaTitle: 0,
+        categoryMetaDescription: 0,
+        subCategoryMetaTitle: 0,
+        subCategoryMetaDescription: 0,
+        'brand.description': 0,
+        'category.description': 0,
+        'category.metaTitle': 0,
+        'category.metaDescription': 0,
+        'category.subCategories.description': 0,
+        'category.subCategories.metaTitle': 0,
+        'category.subCategories.metaDescription': 0,
+      },
+    });
+  }
+
   // Facet pagination stage
   pipeline.push({
     $facet: {
@@ -1042,6 +1070,167 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
   };
 };
 
+const getProductDetailsForAdmin = async (id: string) => {
+  const pipeline: PipelineStage[] = [];
+
+  pipeline.push({
+    $match: {
+      _id: new Types.ObjectId(id),
+    },
+  });
+  // Lookup Category Details
+  pipeline.push({
+    $lookup: {
+      from: 'categories',
+      let: {
+        categoryId: '$category',
+        productSubCategorySlug: '$subCategorySlug',
+      },
+      as: 'categoryDetails',
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $eq: ['$_id', '$$categoryId'],
+            },
+          },
+        },
+        {
+          $project: {
+            name: 1,
+            image: 1,
+            slug: 1,
+            accent: 1,
+            description: 1,
+            metaTitle: 1,
+            metaDescription: 1,
+            isActive: true,
+            subCategories: {
+              $filter: {
+                input: '$subCategories',
+                as: 'subCategory',
+                cond: {
+                  $eq: ['$$subCategory.slug', '$$productSubCategorySlug'],
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  // Lookup Brand Details
+  pipeline.push({
+    $lookup: {
+      from: 'brands',
+      localField: 'brand',
+      foreignField: '_id',
+      as: 'brandDetails',
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$categoryDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$categoryDetails.subCategories',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: '$brandDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  pipeline.push({
+    $addFields: {
+      categoryId: { $ifNull: ['$categoryDetails._id', null] },
+      categoryName: { $ifNull: ['$categoryDetails.name', null] },
+      categorySlug: { $ifNull: ['$categoryDetails.slug', null] },
+      categoryImage: { $ifNull: ['$categoryDetails.image', null] },
+      categoryDescription: {
+        $ifNull: ['$categoryDetails.description', null],
+      },
+      categoryMetaTitle: {
+        $ifNull: ['$categoryDetails.metaTitle', null],
+      },
+      categoryMetaDescription: {
+        $ifNull: ['$categoryDetails.metaDescription', null],
+      },
+      isCategoryActive: {
+        $ifNull: ['$categoryDetails.isActive', false],
+      },
+      categoryAccent: {
+        $ifNull: ['$categoryDetails.accent', null],
+      },
+
+      subCategoryName: {
+        $ifNull: ['$categoryDetails.subCategories.name', null],
+      },
+      subCategoryImage: {
+        $ifNull: ['$categoryDetails.subCategories.image', null],
+      },
+      subCategorySlug: {
+        $ifNull: ['$categoryDetails.subCategories.slug', null],
+      },
+      subCategoryDescription: {
+        $ifNull: ['$categoryDetails.subCategories.description', null],
+      },
+      subCategoryMetaTitle: {
+        $ifNull: ['$categoryDetails.subCategories.metaTitle', null],
+      },
+      subCategoryMetaDescription: {
+        $ifNull: ['$categoryDetails.subCategories.metaDescription', null],
+      },
+      isSubCategoryActive: {
+        $cond: {
+          if: { $eq: [{ $ifNull: ['$subCategorySlug', null] }, null] },
+          then: true,
+          else: { $ifNull: ['$categoryDetails.subCategories.isActive', false] },
+        },
+      },
+      subCategoryAccent: {
+        $ifNull: ['$categoryDetails.subCategories.accent', null],
+      },
+
+      brandId: { $ifNull: ['$brandDetails._id', null] },
+      brandName: { $ifNull: ['$brandDetails.name', null] },
+      brandImage: { $ifNull: ['$brandDetails.image', null] },
+      brandSlug: { $ifNull: ['$brandDetails.slug', null] },
+      brandDescription: { $ifNull: ['$brandDetails.description', null] },
+      isBrandActive: { $ifNull: ['$brandDetails.isActive', false] },
+
+      // ?? --------------- Customer Name: --------------
+      metaTitle: { $ifNull: ['$metaTitle', null] },
+      metaDescription: { $ifNull: ['$metaDescription', null] },
+    },
+  });
+
+  pipeline.push({
+    $project: {
+      brandDetails: 0,
+      categoryDetails: 0,
+    },
+  });
+
+  const product = await ProductModel.aggregate(pipeline);
+
+  if (!product?.[0]) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Product not found.');
+  }
+
+  return product;
+};
+
 // 3. getAllActiveProductsFromDB
 // const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
 //   getAllProductsFromDB({ ...query, includeInactive: undefined });
@@ -1049,6 +1238,7 @@ const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
   getAllProductsFromDBNew({
     ...query,
     includeInactive: undefined,
+    isAdminPanel: false,
   });
 
 // 4. getProductBySlugFromDB
@@ -1559,4 +1749,5 @@ export const ProductService = {
 
   // New endpoints:
   getAllProductsFromDBNew,
+  getProductDetailsForAdmin,
 };

@@ -63,6 +63,17 @@ const getActiveBrand = asyncHandler(async (req, res) => {
   });
 });
 
+// 5.5. getBrandOptions
+const getBrandOptions = asyncHandler(async (_req, res) => {
+  const result = await BrandService.getBrandOptionsFromDB();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    message: 'Brand options fetched successfully!',
+    data: result,
+  });
+});
+
 // 4. updateBrand
 const updateBrand = asyncHandler(async (req, res) => {
   const result = await BrandService.updateBrandIntoDB(
@@ -103,4 +114,5 @@ export const BrandController = {
   getActiveBrand,
   updateBrand,
   deleteBrand,
+  getBrandOptions,
 };

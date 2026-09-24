@@ -72,6 +72,14 @@ const getBrandBySlugFromDB = async (slug: string) => {
   return doc;
 };
 
+// 3.5. getBrandOptionsFromDB
+const getBrandOptionsFromDB = async () =>
+  BrandModel.find({ isActive: true })
+    .select('_id name slug')
+    .sort({ name: 1 })
+    .lean();
+
+
 // 4. getActiveBrandBySlugFromDB
 const getActiveBrandBySlugFromDB = async (slug: string) => {
   const doc = await BrandModel.findOne({ slug, isActive: true }).lean();
@@ -142,4 +150,5 @@ export const BrandService = {
   getActiveBrandBySlugFromDB,
   updateBrandIntoDB,
   deleteBrandFromDB,
+  getBrandOptionsFromDB,
 };
