@@ -184,7 +184,8 @@ const parseCustomPriceRange = (value: string) => {
 const buildProductFilters = async (query: Record<string, unknown>) => {
   const filter: Record<string, unknown> = {};
   const and: Record<string, unknown>[] = [];
-  const includeInactive = query.includeInactive === 'true';
+  const includeInactive =
+    query.includeInactive === 'true' || query.includeInactive === true;
   const searchTerm = getString(query.searchTerm);
   const categorySlug = getString(query.category || query.c);
   const subCategorySlug = getString(query.subCategorySlug || query.subCategory);
@@ -653,6 +654,14 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
+  if (!includeInactive) {
+    pipeline.push({
+      $match: {
+        isActive: true,
+      },
+    });
+  }
+
   if (excludeSlug) {
     pipeline.push({
       $match: {
@@ -863,15 +872,15 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
       categoryName: { $ifNull: ['$categoryDetails.name', null] },
       categorySlug: { $ifNull: ['$categoryDetails.slug', null] },
       categoryImage: { $ifNull: ['$categoryDetails.image', null] },
-      categoryDescription: {
-        $ifNull: ['$categoryDetails.description', null],
-      },
-      categoryMetaTitle: {
-        $ifNull: ['$categoryDetails.metaTitle', null],
-      },
-      categoryMetaDescription: {
-        $ifNull: ['$categoryDetails.metaDescription', null],
-      },
+      // categoryDescription: {
+      //   $ifNull: ['$categoryDetails.description', null],
+      // },
+      // categoryMetaTitle: {
+      //   $ifNull: ['$categoryDetails.metaTitle', null],
+      // },
+      // categoryMetaDescription: {
+      //   $ifNull: ['$categoryDetails.metaDescription', null],
+      // },
       isCategoryActive: {
         $ifNull: ['$categoryDetails.isActive', false],
       },
@@ -888,15 +897,15 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
       subCategorySlug: {
         $ifNull: ['$categoryDetails.subCategories.slug', null],
       },
-      subCategoryDescription: {
-        $ifNull: ['$categoryDetails.subCategories.description', null],
-      },
-      subCategoryMetaTitle: {
-        $ifNull: ['$categoryDetails.subCategories.metaTitle', null],
-      },
-      subCategoryMetaDescription: {
-        $ifNull: ['$categoryDetails.subCategories.metaDescription', null],
-      },
+      // subCategoryDescription: {
+      //   $ifNull: ['$categoryDetails.subCategories.description', null],
+      // },
+      // subCategoryMetaTitle: {
+      //   $ifNull: ['$categoryDetails.subCategories.metaTitle', null],
+      // },
+      // subCategoryMetaDescription: {
+      //   $ifNull: ['$categoryDetails.subCategories.metaDescription', null],
+      // },
       isSubCategoryActive: {
         $cond: {
           if: { $eq: [{ $ifNull: ['$subCategorySlug', null] }, null] },
@@ -912,7 +921,7 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
       brandName: { $ifNull: ['$brandDetails.name', null] },
       brandImage: { $ifNull: ['$brandDetails.image', null] },
       brandSlug: { $ifNull: ['$brandDetails.slug', null] },
-      brandDescription: { $ifNull: ['$brandDetails.description', null] },
+      // brandDescription: { $ifNull: ['$brandDetails.description', null] },
       isBrandActive: { $ifNull: ['$brandDetails.isActive', false] },
 
       // ?? --------------- Customer Name: --------------
@@ -1000,34 +1009,27 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
 
   pipeline.push({
     $project: {
+      description: 0,
+      features: 0,
       brandDetails: 0,
       categoryDetails: 0,
+      'brand.description': 0,
+      'category.description': 0,
+      'category.metaTitle': 0,
+      'category.metaDescription': 0,
+      'category.subCategories.description': 0,
+      'category.subCategories.metaTitle': 0,
+      'category.subCategories.metaDescription': 0,
     },
   });
 
   if (isAdminPanel) {
     pipeline.push({
       $project: {
-        description: 0,
-        features: 0,
         metaTitle: 0,
         metaDescription: 0,
         youtubeVideoUrl: 0,
         youtubeVideoId: 0,
-        brandDescription: 0,
-        categoryDescription: 0,
-        subCategoryDescription: 0,
-        categoryMetaTitle: 0,
-        categoryMetaDescription: 0,
-        subCategoryMetaTitle: 0,
-        subCategoryMetaDescription: 0,
-        'brand.description': 0,
-        'category.description': 0,
-        'category.metaTitle': 0,
-        'category.metaDescription': 0,
-        'category.subCategories.description': 0,
-        'category.subCategories.metaTitle': 0,
-        'category.subCategories.metaDescription': 0,
       },
     });
   }
@@ -1234,12 +1236,14 @@ const getProductDetailsForAdmin = async (id: string) => {
 // 3. getAllActiveProductsFromDB
 // const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
 //   getAllProductsFromDB({ ...query, includeInactive: undefined });
-const getAllActiveProductsFromDB = async (query: Record<string, unknown>) =>
-  getAllProductsFromDBNew({
+const getAllActiveProductsFromDB = async (query: Record<string, unknown>) => {
+  return await getAllProductsFromDBNew({
     ...query,
+
     includeInactive: undefined,
     isAdminPanel: false,
   });
+};
 
 // 4. getProductBySlugFromDB
 const getProductBySlugFromDB = async (slug: string) => {
