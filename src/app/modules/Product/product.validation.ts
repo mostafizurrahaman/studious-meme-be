@@ -329,23 +329,9 @@ const getProductsQueryValidationSchema = z.object({
 
 export const ProductValidation = {
   productCreateSchema: z.object({
-    body: productBaseSchema
-      .extend({
-        sellingUnit: sellingUnitSchema.default(DEFAULT_SELLING_UNIT),
-      })
-      .superRefine((data, ctx) => {
-        if (
-          data.images &&
-          data.imageAlt &&
-          data?.images?.length < data?.imageAlt?.length
-        ) {
-          ctx.addIssue({
-            code: 'custom',
-            path: ['imageAlt'],
-            message: 'Image alt must be equal or less then images count.',
-          });
-        }
-      }),
+    body: productBaseSchema.extend({
+      sellingUnit: sellingUnitSchema.default(DEFAULT_SELLING_UNIT),
+    }),
   }),
   productUpdateSchema: z.object({
     params: z.object({
@@ -358,20 +344,7 @@ export const ProductValidation = {
       .extend({
         sellingUnit: sellingUnitSchema,
       })
-      .partial()
-      .superRefine((data, ctx) => {
-        if (
-          data.images &&
-          data.imageAlt &&
-          data?.images?.length < data?.imageAlt?.length
-        ) {
-          ctx.addIssue({
-            code: 'custom',
-            path: ['imageAlt'],
-            message: 'Image alt must be equal or less then images count.',
-          });
-        }
-      }),
+      .partial(),
   }),
   getProductsQueryValidationSchema,
 };
