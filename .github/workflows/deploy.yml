@@ -53,7 +53,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-
+          
           script: |
             set -euo pipefail
 
@@ -62,56 +62,54 @@ jobs:
             APP_DIR="/var/www/MalaMal_APIs"
             APP_NAME="malamal-apis"
 
-            echo "==> Updating system packages"
+            echo "==> Checking required system packages"
 
-            sudo apt update -y
-            sudo apt install -y git curl
+            if ! command -v git >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+              sudo apt update
+              sudo apt install -y git curl
+            fi
 
             echo "==> Checking Node.js"
 
-            if ! command -v node > /dev/null 2>&1; then
-              echo "Node.js is not installed."
-              exit 1
+            if ! command -v node >/dev/null 2>&1; then
+              echo "Node.js is not installed. Installing Node.js 24..."
+
+              curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+              sudo apt install -y nodejs
             fi
 
-            echo "Node version:"
-            node -v
+            echo "Node version: $(node -v)"
+            echo "NPM version: $(npm -v)"
 
-            echo "NPM version:"
-            npm -v
+            echo "==> Checking PM2"
 
-            echo "==> Checking/Installing PM2"
-
-            if ! command -v pm2 > /dev/null 2>&1; then
-              sudo npm install -g pm2
+            if ! command -v pm2 >/dev/null 2>&1; then
+              sudo npm install -g pm2@latest
             fi
+
+            echo "PM2 version: $(pm2 -v)"
 
             echo "==> Preparing app directory"
 
             sudo mkdir -p "$APP_DIR"
             sudo chown -R "$USER:$USER" "$APP_DIR"
 
-            cd "$APP_DIR" || exit 1
+            cd "$APP_DIR"
 
             echo "==> Updating source code"
 
             if [ ! -d ".git" ]; then
               git clone -b main "${{ secrets.REPO_URL }}" .
             else
-              if git remote get-url origin > /dev/null 2>&1; then
-                git remote set-url origin "${{ secrets.REPO_URL }}"
-              else
-                git remote add origin "${{ secrets.REPO_URL }}"
-              fi
-
+              git remote set-url origin "${{ secrets.REPO_URL }}"
               git fetch origin main
               git reset --hard origin/main
               git clean -fd
             fi
 
-            echo "==> Creating .env file"
+            echo "==> Creating .env"
 
-            cat <<EOF > .env
+            cat <<'EOF' > .env
             ${{ secrets.ENV_FILE }}
             EOF
 
@@ -123,20 +121,16 @@ jobs:
 
             npm run build
 
-            echo "==> Starting/Reloading with PM2"
+            echo "==> Starting/Reloading PM2"
 
-            if pm2 describe "$APP_NAME" > /dev/null 2>&1; then
-              echo "App is already running. Reloading PM2 process..."
-
+            if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
               pm2 reload "$APP_NAME"
             else
-              echo "App is not running. Starting new PM2 process..."
-
               pm2 start dist/server.js --name "$APP_NAME"
             fi
 
             pm2 save
 
-            echo "==> Backend deploy success without Nginx changes!"
+            echo "==> Deployment successful!"
 
             pm2 status
