@@ -3,6 +3,9 @@ import pluginJs from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import unusedImports from 'eslint-plugin-unused-imports';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
@@ -44,8 +47,3 @@ export default [
     },
   },
 ];
-
-// unused import auto remove command: pnpm eslint --ext .js,.ts,.jsx,.tsx . --fix OR pnpm eslint . --fix
-// format all file using prettier: pnpm format
-// all package latest install: pnpm add -D @eslint/js@latest eslint@latest globals@latest typescript-eslint@latest
-// to check unused packages: npx depcheck OR npx knip OR npx npm-check
