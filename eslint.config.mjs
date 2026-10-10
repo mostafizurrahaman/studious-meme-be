@@ -3,9 +3,6 @@ import pluginJs from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import unusedImports from 'eslint-plugin-unused-imports';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
