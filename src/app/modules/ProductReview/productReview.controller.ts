@@ -1,7 +1,7 @@
 import httpStatus from 'http-status';
 import type { Express } from 'express';
 import { asyncHandler, sendResponse } from '../../utils';
-import { uploadFilesAndInjectUrls } from '../../lib';
+import { R2_FOLDERS, uploadFilesAndInjectUrls } from '../../lib';
 import { ProductReviewService } from './productReview.service';
 
 const getParam = (value: string | string[]) =>
@@ -18,6 +18,7 @@ const createCustomerReview = asyncHandler(async (req, res) => {
   const payload = await uploadFilesAndInjectUrls(
     req.body,
     flattenUploadedFiles(req.files),
+    { folder: R2_FOLDERS.REVIEW },
   );
   const result = await ProductReviewService.createCustomerReviewIntoDB(
     req.user,
@@ -35,6 +36,7 @@ const createManualReview = asyncHandler(async (req, res) => {
   const payload = await uploadFilesAndInjectUrls(
     req.body,
     flattenUploadedFiles(req.files),
+    { folder: R2_FOLDERS.REVIEW },
   );
   const result = await ProductReviewService.createManualReviewIntoDB(
     req.user,
@@ -79,6 +81,7 @@ const updateReview = asyncHandler(async (req, res) => {
   const payload = await uploadFilesAndInjectUrls(
     req.body,
     flattenUploadedFiles(req.files),
+    { folder: R2_FOLDERS.REVIEW },
   );
   const result = await ProductReviewService.updateReviewIntoDB(
     getParam(req.params.id),

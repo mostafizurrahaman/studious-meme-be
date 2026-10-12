@@ -5,7 +5,11 @@ import { CategoryModel } from '../Category/category.model';
 import { HeroSectionModel } from './heroSection.model';
 import { ProductModel } from '../Product/product.model';
 import { IHeroSection } from './heroSection.interface';
-import { deleteImageFromCloudinary, uploadFilesAndInjectUrls } from '../../lib';
+import {
+  deleteImageByUrl,
+  R2_FOLDERS,
+  uploadFilesAndInjectUrls,
+} from '../../lib';
 import { MulterFile } from '../../lib/upload';
 
 const getHeroSectionImages = (
@@ -20,7 +24,7 @@ const deleteHeroSectionImages = async (
 ) => {
   await Promise.all(
     getHeroSectionImages(heroSection).map(image =>
-      deleteImageFromCloudinary(image),
+      deleteImageByUrl(image),
     ),
   );
 };
@@ -177,6 +181,7 @@ const createHeroSectionIntoDB = async (
   const nextPayload = await uploadFilesAndInjectUrls(
     payload,
     Array.isArray(files) ? files : [],
+    { folder: R2_FOLDERS.HERO_SECTION },
   );
   ensureHeroSectionImages(nextPayload);
 
@@ -223,7 +228,7 @@ const createHeroSectionIntoDB = async (
       .filter(
         image => !getHeroSectionImages(updated.toObject()).includes(image),
       )
-      .map(image => deleteImageFromCloudinary(image)),
+      .map(image => deleteImageByUrl(image)),
   );
   await keepOnlyLatestHeroSection();
 
@@ -266,6 +271,7 @@ const updateHeroSectionIntoDB = async (
     updatedPayload = await uploadFilesAndInjectUrls(
       payload,
       Array.isArray(files) ? files : [],
+      { folder: R2_FOLDERS.HERO_SECTION },
     );
     ensureHeroSectionImages(updatedPayload);
 
@@ -286,7 +292,7 @@ const updateHeroSectionIntoDB = async (
     await Promise.all(
       previousImages
         .filter(image => !nextImages.includes(image))
-        .map(image => deleteImageFromCloudinary(image)),
+        .map(image => deleteImageByUrl(image)),
     );
 
     await keepOnlyLatestHeroSection();
@@ -304,7 +310,7 @@ const updateHeroSectionIntoDB = async (
         image => !previousImages.includes(image),
       );
       await Promise.all(
-        newImages.map(image => deleteImageFromCloudinary(image)),
+        newImages.map(image => deleteImageByUrl(image)),
       );
     }
 
@@ -313,8 +319,13 @@ const updateHeroSectionIntoDB = async (
 };
 
 // 7. deleteHeroSectionFromDB
-const deleteHeroSectionFromDB = async (id: string) =>
-  HeroSectionModel.findByIdAndDelete(id);
+const deleteHeroSectionFromDB = async (id: string) => {
+  const deleted = await HeroSectionModel.findByIdAndDelete(id);
+  if (deleted) {
+    await deleteHeroSectionImages(deleted.toObject());
+  }
+  return deleted;
+};
 
 export const HeroSectionService = {
   getHomeContentFromDB,

@@ -206,6 +206,16 @@ import multer from 'multer';
 import config from '../config';
 import { Readable } from 'stream';
 
+import {
+  deleteImageByUrl,
+  deleteImageFromR2,
+  identifyImageStorageProvider,
+  isCloudflareR2Url,
+  isCloudinaryUrl,
+  uploadImageToR2,
+  uploadImageToStorage,
+} from '../utils/imageStorage';
+
 export type MulterFile = Express.Multer.File;
 
 export const uploadFilesAndInjectUrls = async <
@@ -213,6 +223,7 @@ export const uploadFilesAndInjectUrls = async <
 >(
   payload: T,
   files: MulterFile[] = [],
+  options?: { provider?: 'r2' | 'cloudinary'; folder?: string },
 ): Promise<T> => {
   const nextPayload = JSON.parse(JSON.stringify(payload)) as T;
   const uploadedUrls: string[] = [];
@@ -273,7 +284,11 @@ export const uploadFilesAndInjectUrls = async <
 
   try {
     for (const file of files) {
-      const { secure_url } = await sendImageToCloudinary(file);
+      // Use R2 by default with specified module folder
+      const { secure_url } = await uploadImageToStorage(file, {
+        provider: options?.provider || 'r2',
+        folder: options?.folder,
+      });
       uploadedUrls.push(secure_url);
       setNestedValue(
         nextPayload as Record<string, unknown>,
@@ -284,9 +299,7 @@ export const uploadFilesAndInjectUrls = async <
 
     return nextPayload;
   } catch (error) {
-    await Promise.all(
-      uploadedUrls.map((url) => deleteImageFromCloudinary(url)),
-    );
+    await Promise.all(uploadedUrls.map((url) => deleteImageByUrl(url)));
     throw error;
   }
 };
@@ -327,6 +340,17 @@ const getPublicIdFromUrl = (imageUrl: string): string => {
 };
 
 /* -------------------------------------------------------- */
+/*               Upload Image to Cloudflare R2              */
+/* -------------------------------------------------------- */
+
+export const sendImageToR2 = async (
+  file: MulterFile,
+  folder?: string,
+) => {
+  return uploadImageToR2(file, { folder });
+};
+
+/* -------------------------------------------------------- */
 /*               Upload Image to Cloudinary                 */
 /* -------------------------------------------------------- */
 
@@ -362,15 +386,27 @@ export const sendImageToCloudinary = (
 };
 
 /* -------------------------------------------------------- */
-/*              Delete Image from Cloudinary                */
+/*              Delete Image from Cloudinary / R2           */
 /* -------------------------------------------------------- */
 
+/**
+ * Smart deletion that identifies whether the URL is Cloudinary or Cloudflare R2
+ * and dispatches to the correct handler.
+ */
 export const deleteImageFromCloudinary = async (
   imageUrl: string,
 ): Promise<void> => {
-  const publicId = getPublicIdFromUrl(imageUrl);
+  await deleteImageByUrl(imageUrl);
+};
 
-  await cloudinary.uploader.destroy(publicId);
+export {
+  deleteImageByUrl,
+  deleteImageFromR2,
+  identifyImageStorageProvider,
+  isCloudflareR2Url,
+  isCloudinaryUrl,
+  uploadImageToR2,
+  uploadImageToStorage,
 };
 
 /* ------------------------------------------------------- */
