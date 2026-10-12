@@ -4,9 +4,10 @@ import config from '../../config';
 import {
   createAccessToken,
   createRefreshToken,
-  deleteImageFromCloudinary,
+  deleteImageByUrl,
   generateOtp,
-  sendImageToCloudinary,
+  R2_FOLDERS,
+  sendImageToR2,
   verifyToken,
 } from '../../lib';
 import { AppError, sendOtpEmail } from '../../utils';
@@ -290,8 +291,8 @@ const updateProfilePhotoIntoDB = async (
     throw new AppError(httpStatus.BAD_REQUEST, 'Image is required!');
   }
 
-  // 2. Upload the new profile photo to Cloudinary
-  const { secure_url } = await sendImageToCloudinary(imageFile);
+  // 2. Upload the new profile photo to Cloudflare R2
+  const { secure_url } = await sendImageToR2(imageFile, R2_FOLDERS.USER);
 
   // 3. Update the user's image URL in the database
   const userNewData = await UserModel.findByIdAndUpdate(
@@ -300,19 +301,18 @@ const updateProfilePhotoIntoDB = async (
     { returnDocument: 'after' },
   ).select('name email phone dob image role');
 
-  // 4. Rollback Logic: If DB update fails, delete the newly uploaded image from Cloudinary
+  // 4. Rollback Logic: If DB update fails, delete the newly uploaded image from R2
   if (!userNewData) {
-    // Use secure_url to delete from Cloudinary, not the local path
-    await deleteImageFromCloudinary(secure_url);
+    await deleteImageByUrl(secure_url);
     throw new AppError(
       httpStatus.INTERNAL_SERVER_ERROR,
       'Failed to update profile photo. Please try again!',
     );
   }
 
-  // 5. Cleanup: Delete the previous image from Cloudinary if it exists and is not a default image
+  // 5. Cleanup: Delete the previous image if it exists and is not a default image
   if (user?.image && user.image !== defaultUserImage) {
-    await deleteImageFromCloudinary(user.image);
+    await deleteImageByUrl(user.image);
   }
 
   // 6. Prepare payload and Generate a new Access Token with updated data

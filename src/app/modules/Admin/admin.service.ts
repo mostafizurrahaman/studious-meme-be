@@ -1,9 +1,10 @@
 import httpStatus from 'http-status';
 import { AppError, sendOtpEmail } from '../../utils';
 import {
-  deleteImageFromCloudinary,
+  deleteImageByUrl,
   generateOtp,
-  sendImageToCloudinary,
+  R2_FOLDERS,
+  sendImageToR2,
 } from '../../lib';
 import { OTP_EXPIRY_MINUTES, ROLE } from '../User/user.constant';
 import UserModel from '../User/user.model';
@@ -30,7 +31,7 @@ const createAdminIntoDB = async (
 
   try {
     if (imageFile) {
-      const { secure_url } = await sendImageToCloudinary(imageFile);
+      const { secure_url } = await sendImageToR2(imageFile, R2_FOLDERS.ADMIN);
       uploadedImage = secure_url;
     }
 
@@ -50,7 +51,7 @@ const createAdminIntoDB = async (
     };
   } catch (error) {
     if (uploadedImage) {
-      await deleteImageFromCloudinary(uploadedImage);
+      await deleteImageByUrl(uploadedImage);
     }
 
     throw error;
@@ -97,7 +98,7 @@ const updateAdminIntoDB = async (
 
   try {
     if (imageFile) {
-      const { secure_url } = await sendImageToCloudinary(imageFile);
+      const { secure_url } = await sendImageToR2(imageFile, R2_FOLDERS.ADMIN);
       uploadedImage = secure_url;
     }
 
@@ -109,7 +110,7 @@ const updateAdminIntoDB = async (
 
     if (!admin) {
       if (uploadedImage) {
-        await deleteImageFromCloudinary(uploadedImage);
+        await deleteImageByUrl(uploadedImage);
       }
       throw new AppError(httpStatus.NOT_FOUND, 'Admin not found!');
     }
@@ -119,13 +120,13 @@ const updateAdminIntoDB = async (
       existingAdmin.image &&
       existingAdmin.image !== uploadedImage
     ) {
-      await deleteImageFromCloudinary(existingAdmin.image);
+      await deleteImageByUrl(existingAdmin.image);
     }
 
     return admin;
   } catch (error) {
     if (uploadedImage) {
-      await deleteImageFromCloudinary(uploadedImage);
+      await deleteImageByUrl(uploadedImage);
     }
 
     throw error;

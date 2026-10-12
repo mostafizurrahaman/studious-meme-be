@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
 import { AppError } from '../../utils';
-import { deleteImageFromCloudinary, sendImageToCloudinary } from '../../lib';
+import {
+  deleteImageByUrl,
+  R2_FOLDERS,
+  sendImageToR2,
+} from '../../lib';
 import { ProductModel } from './product.model';
 import { IProduct } from './product.interface';
 import { CategoryModel } from '../Category/category.model';
@@ -373,7 +377,10 @@ const createProductIntoDB = async (
 
   try {
     for (const imageFile of files) {
-      const { secure_url } = await sendImageToCloudinary(imageFile);
+      const { secure_url } = await sendImageToR2(
+        imageFile,
+        R2_FOLDERS.PRODUCT,
+      );
       uploadedImages.push(secure_url);
     }
 
@@ -441,7 +448,7 @@ const createProductIntoDB = async (
     });
   } catch (error) {
     await Promise.all(
-      uploadedImages.map(url => deleteImageFromCloudinary(url)),
+      uploadedImages.map(url => deleteImageByUrl(url)),
     );
 
     throw error;
@@ -1289,7 +1296,10 @@ const updateProductIntoDB = async (
 
   try {
     for (const imageFile of files) {
-      const { secure_url } = await sendImageToCloudinary(imageFile);
+      const { secure_url } = await sendImageToR2(
+        imageFile,
+        R2_FOLDERS.PRODUCT,
+      );
       uploadedImages.push(secure_url);
     }
 
@@ -1398,7 +1408,7 @@ const updateProductIntoDB = async (
 
     if (!updated) {
       await Promise.all(
-        uploadedImages.map(url => deleteImageFromCloudinary(url)),
+        uploadedImages.map(url => deleteImageByUrl(url)),
       );
       throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
     }
@@ -1407,14 +1417,14 @@ const updateProductIntoDB = async (
       await Promise.all(
         existingImages
           .filter(url => !nextImages.includes(url))
-          .map(url => deleteImageFromCloudinary(url)),
+          .map(url => deleteImageByUrl(url)),
       );
     }
 
     return updated;
   } catch (error) {
     await Promise.all(
-      uploadedImages.map(url => deleteImageFromCloudinary(url)),
+      uploadedImages.map(url => deleteImageByUrl(url)),
     );
 
     throw error;
@@ -1427,6 +1437,11 @@ const deleteProductFromDB = async (slug: string) => {
   if (!product) {
     throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
   }
+
+  if (product.images && product.images.length > 0) {
+    await Promise.all(product.images.map(url => deleteImageByUrl(url)));
+  }
+
   return product;
 };
 

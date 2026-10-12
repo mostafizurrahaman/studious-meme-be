@@ -1,6 +1,6 @@
 import httpStatus from 'http-status';
 import { AppError } from '../../utils';
-import { deleteImageFromCloudinary, sendImageToCloudinary } from '../../lib';
+import { deleteImageByUrl, R2_FOLDERS, sendImageToR2 } from '../../lib';
 import { CategoryModel } from './category.model';
 import { ICategory, ISubCategoryItem } from './category.interface';
 import { MulterFile } from '../../lib/upload';
@@ -18,7 +18,10 @@ const createCategoryIntoDB = async (
     throw new AppError(httpStatus.NOT_FOUND, 'Category image is required!');
   }
 
-  const { secure_url } = await sendImageToCloudinary(imageFile);
+  const { secure_url } = await sendImageToR2(
+    imageFile,
+    R2_FOLDERS.CATEGORY,
+  );
 
   const category = await CategoryModel.create({
     ...payload,
@@ -26,7 +29,7 @@ const createCategoryIntoDB = async (
   });
 
   if (!category) {
-    await deleteImageFromCloudinary(secure_url);
+    await deleteImageByUrl(secure_url);
   }
 
   return category;
@@ -100,7 +103,10 @@ const updateCategoryIntoDB = async (
 
   try {
     if (imageFile) {
-      const { secure_url } = await sendImageToCloudinary(imageFile);
+      const { secure_url } = await sendImageToR2(
+        imageFile,
+        R2_FOLDERS.CATEGORY,
+      );
       uploadedImage = secure_url;
     }
 
@@ -112,7 +118,7 @@ const updateCategoryIntoDB = async (
 
     if (!updated) {
       if (uploadedImage) {
-        await deleteImageFromCloudinary(uploadedImage);
+        await deleteImageByUrl(uploadedImage);
       }
       throw new AppError(httpStatus.NOT_FOUND, 'Category not found!');
     }
@@ -122,13 +128,13 @@ const updateCategoryIntoDB = async (
       existingCategory.image &&
       existingCategory.image !== uploadedImage
     ) {
-      await deleteImageFromCloudinary(existingCategory.image);
+      await deleteImageByUrl(existingCategory.image);
     }
 
     return updated;
   } catch (error) {
     if (uploadedImage) {
-      await deleteImageFromCloudinary(uploadedImage);
+      await deleteImageByUrl(uploadedImage);
     }
 
     throw error;
@@ -185,7 +191,10 @@ const createCategorySubCategoryIntoDB = async (
 
   try {
     if (imageFile) {
-      const { secure_url } = await sendImageToCloudinary(imageFile);
+      const { secure_url } = await sendImageToR2(
+        imageFile,
+        R2_FOLDERS.CATEGORY,
+      );
       uploadedImage = secure_url;
     }
 
@@ -196,7 +205,7 @@ const createCategorySubCategoryIntoDB = async (
     return category.save();
   } catch (error) {
     if (uploadedImage) {
-      await deleteImageFromCloudinary(uploadedImage);
+      await deleteImageByUrl(uploadedImage);
     }
 
     throw error;
@@ -227,7 +236,10 @@ const updateCategorySubCategoryIntoDB = async (
     session.startTransaction();
 
     if (imageFile) {
-      const { secure_url } = await sendImageToCloudinary(imageFile);
+      const { secure_url } = await sendImageToR2(
+        imageFile,
+        R2_FOLDERS.CATEGORY,
+      );
       uploadedImage = secure_url;
     }
 
@@ -249,14 +261,14 @@ const updateCategorySubCategoryIntoDB = async (
     await session.commitTransaction();
 
     if (uploadedImage && previousImage && previousImage !== uploadedImage) {
-      await deleteImageFromCloudinary(previousImage);
+      await deleteImageByUrl(previousImage);
     }
 
     return saved;
   } catch (error) {
     await session.abortTransaction();
     if (uploadedImage) {
-      await deleteImageFromCloudinary(uploadedImage);
+      await deleteImageByUrl(uploadedImage);
     }
 
     throw error;

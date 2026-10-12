@@ -1,6 +1,6 @@
 import httpStatus from 'http-status';
 import { AppError } from '../../utils';
-import { deleteImageFromCloudinary, sendImageToCloudinary } from '../../lib';
+import { deleteImageByUrl, R2_FOLDERS, sendImageToR2 } from '../../lib';
 import { BrandModel } from './brand.model';
 import { IBrand } from './brand.interface';
 import { MulterFile } from '../../lib/upload';
@@ -14,7 +14,7 @@ const createBrandIntoDB = async (
     throw new AppError(httpStatus.NOT_FOUND, 'Brand image is required!');
   }
 
-  const { secure_url } = await sendImageToCloudinary(imageFile);
+  const { secure_url } = await sendImageToR2(imageFile, R2_FOLDERS.BRAND);
 
   const brand = await BrandModel.create({
     ...payload,
@@ -22,7 +22,7 @@ const createBrandIntoDB = async (
   });
 
   if (!brand) {
-    await deleteImageFromCloudinary(secure_url);
+    await deleteImageByUrl(secure_url);
   }
 
   return brand;
@@ -103,7 +103,7 @@ const updateBrandIntoDB = async (
 
   try {
     if (imageFile) {
-      const { secure_url } = await sendImageToCloudinary(imageFile);
+      const { secure_url } = await sendImageToR2(imageFile, R2_FOLDERS.BRAND);
       uploadedImage = secure_url;
     }
 
@@ -115,7 +115,7 @@ const updateBrandIntoDB = async (
 
     if (!updated) {
       if (uploadedImage) {
-        await deleteImageFromCloudinary(uploadedImage);
+        await deleteImageByUrl(uploadedImage);
       }
       throw new AppError(httpStatus.NOT_FOUND, 'Brand not found!');
     }
@@ -125,13 +125,13 @@ const updateBrandIntoDB = async (
       existingBrand.image &&
       existingBrand.image !== uploadedImage
     ) {
-      await deleteImageFromCloudinary(existingBrand.image);
+      await deleteImageByUrl(existingBrand.image);
     }
 
     return updated;
   } catch (error) {
     if (uploadedImage) {
-      await deleteImageFromCloudinary(uploadedImage);
+      await deleteImageByUrl(uploadedImage);
     }
 
     throw error;
@@ -139,8 +139,13 @@ const updateBrandIntoDB = async (
 };
 
 // 5. deleteBrandFromDB
-const deleteBrandFromDB = async (slug: string) =>
-  BrandModel.findOneAndDelete({ slug });
+const deleteBrandFromDB = async (slug: string) => {
+  const brand = await BrandModel.findOneAndDelete({ slug });
+  if (brand?.image) {
+    await deleteImageByUrl(brand.image);
+  }
+  return brand;
+};
 
 export const BrandService = {
   createBrandIntoDB,
