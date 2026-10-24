@@ -33,6 +33,8 @@
     "start": "node ./dist/server.js",
     "generate": "node generate",
     "create-module": "npx ts-node ./src/scripts/createModule.ts",
+    "check-images": "npx ts-node --transpile-only ./src/scripts/checkBrokenProductImages.ts",
+    "migrate:remove-cloudinary": "npx ts-node --transpile-only ./src/scripts/removeCloudinaryImagesMigration.ts",
     "deploy": "pnpm build && vercel && vercel --prod",
     "format": "prettier . --write",
     "dev2": "cross-env NODE_ENV=development tsx watch ./src/server.ts",
