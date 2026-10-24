@@ -172,3 +172,67 @@ export const migrateProductBrandCategoryNames = async (): Promise<void> => {
     console.error('Fatal error during migration:', error);
   }
 };
+
+/**
+ * Migration: Remove all Cloudinary image URLs from product images array
+ */
+export const removeCloudinaryImagesFromProductsMigration = async (
+  dryRun = false,
+): Promise<{
+  scanned: number;
+  matched: number;
+  removedUrls: number;
+  updated: number;
+}> => {
+  console.log(`\nStarting Product Cloudinary Images Migration [${dryRun ? 'DRY-RUN' : 'LIVE'}]...`);
+  await waitForMongoConnection();
+
+  const products = await ProductModel.find(
+    {},
+    { _id: 1, images: 1, slug: 1, title: 1 },
+  ).lean();
+
+  const { isCloudinaryUrl } = await import('../../utils/imageStorage');
+
+  const bulkOps: any[] = [];
+  let totalRemovedUrls = 0;
+
+  for (const product of products) {
+    const rawImages: string[] = Array.isArray(product.images) ? product.images : [];
+    const filteredImages = rawImages.filter(url => !isCloudinaryUrl(url));
+
+    if (filteredImages.length !== rawImages.length) {
+      totalRemovedUrls += rawImages.length - filteredImages.length;
+      bulkOps.push({
+        updateOne: {
+          filter: { _id: product._id },
+          update: {
+            $set: {
+              images: filteredImages,
+              ...(filteredImages.length === 0 ? { imageAlt: [] } : {}),
+            },
+          },
+        },
+      });
+    }
+  }
+
+  let modifiedCount = 0;
+  if (!dryRun && bulkOps.length > 0) {
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < bulkOps.length; i += BATCH_SIZE) {
+      const batch = bulkOps.slice(i, i + BATCH_SIZE);
+      const res = await ProductModel.bulkWrite(batch, { ordered: false });
+      modifiedCount += res.modifiedCount;
+    }
+  }
+
+  console.log(`Cloudinary Migration Finished: Scanned ${products.length}, Matched ${bulkOps.length}, Removed ${totalRemovedUrls} URLs, Modified ${modifiedCount} docs.`);
+  return {
+    scanned: products.length,
+    matched: bulkOps.length,
+    removedUrls: totalRemovedUrls,
+    updated: modifiedCount,
+  };
+};
+

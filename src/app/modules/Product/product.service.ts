@@ -1413,11 +1413,13 @@ const updateProductIntoDB = async (
       throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
     }
 
-    if (uploadedImages.length > 0) {
-      await Promise.all(
-        existingImages
-          .filter(url => !nextImages.includes(url))
-          .map(url => deleteImageByUrl(url)),
+    const removedImages = existingImages.filter(
+      url => !nextImages.includes(url),
+    );
+
+    if (removedImages.length > 0) {
+      await Promise.allSettled(
+        removedImages.map(url => deleteImageByUrl(url)),
       );
     }
 
