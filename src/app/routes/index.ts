@@ -20,8 +20,10 @@ import { ProductReviewRoutes } from '../modules/ProductReview/productReview.rout
 import { ProductReviewAdminRoutes } from '../modules/ProductReview/productReview.admin.routes';
 import { testRoutes } from '../modules/test/test.route';
 import { AddressRoutes } from '../modules/Address/address.routes';
+import { AuditLogRoutes } from '../modules/AuditLog/auditLog.routes';
 
 const router = Router();
+
 
 const moduleRoutes = [
   {
@@ -108,7 +110,12 @@ const moduleRoutes = [
     path: '/dashboard',
     route: DashboardRoutes,
   },
+  {
+    path: '/audit-logs',
+    route: AuditLogRoutes,
+  },
 ];
+
 
 moduleRoutes.forEach(route => router.use(route.path, route.route));
 
