@@ -1601,7 +1601,7 @@ const searchProducts = async (searchTerm: string, limit = 10) => {
                   },
                 },
               },
-            },
+          },
 
           // 8. Description
           // {
