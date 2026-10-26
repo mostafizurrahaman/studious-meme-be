@@ -1,9 +1,13 @@
 import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
 import { AppError, asyncHandler } from '../../utils';
 import { UserService } from './user.service';
-// import { TProfileFileFields } from '../../types';
 import { sendResponse } from '../../utils';
 import { OTP_EXPIRY_MINUTES } from './user.constant';
+import { AuditLogService } from '../AuditLog/auditLog.service';
+import { verifyToken } from '../../lib';
+import config from '../../config';
+
 
 const getSingleParam = (value: string | string[]) =>
   Array.isArray(value) ? value[0] : value;
@@ -48,12 +52,50 @@ const verifySignupOtp = asyncHandler(async (req, res) => {
 const signin = asyncHandler(async (req, res) => {
   const result = await UserService.signinIntoDB(req.body);
 
+  // Audit log for Admin and Super Admin login
+  try {
+    if (result.accessToken && config.jwt.access_secret) {
+      const decoded = verifyToken(
+        result.accessToken,
+        config.jwt.access_secret,
+      ) as JwtPayload;
+
+      if (decoded && ['ADMIN', 'SUPER_ADMIN'].includes(decoded.role)) {
+        const clientIp =
+          (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
+          req.socket.remoteAddress ||
+          req.ip ||
+          'unknown';
+
+        void AuditLogService.recordAuditLog({
+          user: decoded._id,
+          userName: decoded.name || 'Admin User',
+          userEmail: decoded.email || req.body.email,
+          userRole: decoded.role,
+          userImage: decoded.image,
+          action: 'LOGIN',
+          module: 'AUTH',
+          description: `${decoded.name || 'Admin'} [${decoded.role}] logged into the platform`,
+          method: 'POST',
+          path: req.originalUrl || req.url,
+          statusCode: httpStatus.OK,
+          ipAddress: clientIp,
+          userAgent: (req.headers['user-agent'] as string) || 'unknown',
+          timestamp: new Date(),
+        });
+      }
+    }
+  } catch {
+    // Non-blocking
+  }
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     message: 'Signin successful!',
     data: result,
   });
 });
+
 
 // 5. updateProfilePhoto
 const updateProfilePhoto = asyncHandler(async (req, res) => {

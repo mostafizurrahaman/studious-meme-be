@@ -9,7 +9,8 @@ import os from 'os';
 import path from 'path';
 import config from './app/config';
 import serverHomePage, { getMonitorStats } from './app/helpers/serverHomePage';
-import { globalLimiter } from './app/middlewares';
+import { auditLogger, globalLimiter } from './app/middlewares';
+
 // import { migrateOldImagesToCloudinary } from './app/scripts/migrateOldImagesToCloudinary';
 import { responseTimeLogger } from './app/middlewares/logger';
 
@@ -151,8 +152,12 @@ app.get('/favicon.ico', (_req: Request, res: Response) => {
   });
 });
 
+// Audit logger for ADMIN and SUPER_ADMIN actions
+app.use(auditLogger);
+
 // all main routes
 app.use('/api/v1', routes);
+
 
 // Testing
 app.get('/', (req: Request, res: Response) => {

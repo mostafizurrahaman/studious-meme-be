@@ -1,4 +1,5 @@
 import auth from './auth';
+import { auditLogger } from './auditLogger';
 import {
   validateRequest,
   validateRequestFromFormData,
@@ -18,6 +19,7 @@ import {
 export {
   actionLimiter,
   adminLimiter,
+  auditLogger,
   auth,
   authLimiter,
   burstProtection,
@@ -29,3 +31,4 @@ export {
   validateRequest,
   validateRequestFromFormData,
 };
+
