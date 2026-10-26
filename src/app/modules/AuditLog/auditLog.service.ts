@@ -164,5 +164,5 @@ export const AuditLogService = {
   recordAuditLog,
   getAllAuditLogsFromDB,
   getAuditLogStatsFromDB,
-  getAuditLogByIdFromDB,
+  getAuditLogByIdFromDB, // new changes
 };
