@@ -996,16 +996,16 @@ const getAllProductsFromDBNew = async (query: TGetAllProductQueryType) => {
     });
   }
 
-  if (!includeInactive) {
-    pipeline.push({
-      $match: {
-        isSubCategoryActive: true,
-        isCategoryActive: true,
-        isActive: true,
-        isBrandActive: true,
-      },
-    });
-  }
+  // if (!includeInactive) {
+  //   pipeline.push({
+  //     $match: {
+  //       isSubCategoryActive: true,
+  //       isCategoryActive: true,
+  //       isActive: true,
+  //       isBrandActive: true,
+  //     },
+  //   });
+  // }
 
   pipeline.push({
     $addFields: {
@@ -1270,6 +1270,8 @@ const getActiveProductBySlugFromDB = async (slug: string) => {
     .populate({ path: 'brand', match: { isActive: true } })
     .populate({ path: 'category', match: { isActive: true } })
     .lean();
+
+    console.log(doc)
 
   if (!doc || !doc.brand || !doc.category)
     throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
