@@ -1273,8 +1273,10 @@ const getActiveProductBySlugFromDB = async (slug: string) => {
 
     console.log(doc)
 
-  if (!doc || !doc.brand || !doc.category)
-    throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
+  // if (!doc || !doc.brand || !doc.category)
+  //   throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
+
+  if (!doc )throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');
 
   return doc;
 };
