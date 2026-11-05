@@ -20,7 +20,7 @@ router.route('/home').get(publicLimiter, HeroSectionController.getHomeContent);
 // 2. Atomic Hero Banner Routes
 // 2.1 Reorder banners (Must be before /banners/:bannerId)
 router.route('/banners/reorder').patch(
-  auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+  auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
   adminLimiter,
   burstProtection('admin', 10_000, 15),
   validateRequest(HeroSectionValidation.bannerReorderSchema),
@@ -31,7 +31,7 @@ router.route('/banners/reorder').patch(
 router
   .route('/banners')
   .post(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     multerUpload.single('image'),
@@ -42,7 +42,7 @@ router
 
 // 2.3 Update banner status
 router.route('/banners/:bannerId/status').patch(
-  auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+  auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
   adminLimiter,
   validateRequest(HeroSectionValidation.bannerStatusSchema),
   HeroSectionController.updateHeroBannerStatus,
@@ -53,7 +53,7 @@ router
   .route('/banners/:bannerId')
   .get(publicLimiter, HeroSectionController.getHeroBannerById)
   .patch(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     multerUpload.single('image'),
@@ -61,7 +61,7 @@ router
     HeroSectionController.updateHeroBanner,
   )
   .delete(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     HeroSectionController.deleteHeroBanner,
   );
@@ -70,7 +70,7 @@ router
 router
   .route('/heroes')
   .post(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     multerUpload.any(),
@@ -83,7 +83,7 @@ router
   .route('/heroes/:heroSectionId')
   .get(publicLimiter, HeroSectionController.getHeroSection)
   .patch(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     multerUpload.any(),
@@ -91,7 +91,7 @@ router
     HeroSectionController.updateHeroSection,
   )
   .delete(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     HeroSectionController.deleteHeroSection,
   );

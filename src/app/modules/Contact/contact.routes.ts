@@ -17,7 +17,7 @@ const router = Router();
 router
   .route('/')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     ContactController.adminGetAllContacts,
   );

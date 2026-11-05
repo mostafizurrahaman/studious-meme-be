@@ -16,7 +16,7 @@ const router = Router();
 router
   .route('/create-or-update')
   .put(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     validateRequest(pageZodValidation.createOrUpdatePageSchema),

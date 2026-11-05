@@ -16,7 +16,7 @@ const router = Router();
 router
   .route('/')
   .get(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN,   ROLE.MODERATOR),
     actionLimiter,
     CartController.getMyCart,
   );
@@ -24,7 +24,7 @@ router
 router
   .route('/items')
   .post(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     actionLimiter,
     burstProtection('action', 10_000, 12),
     duplicateSubmissionGuard(),
@@ -32,7 +32,7 @@ router
     CartController.addCartItem,
   )
   .patch(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN,  ROLE.MODERATOR),
     actionLimiter,
     validateRequest(CartValidation.cartUpdateSchema),
     CartController.updateCartItem,
@@ -41,7 +41,7 @@ router
 router
   .route('/items/:productId')
   .delete(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN,  ROLE.MODERATOR),
     actionLimiter,
     CartController.removeCartItem,
   );
@@ -49,7 +49,7 @@ router
 router
   .route('/clear')
   .delete(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN,  ROLE.MODERATOR),
     actionLimiter,
     CartController.clearCart,
   );
@@ -57,7 +57,7 @@ router
 router
   .route('/admin')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR,  ROLE.MODERATOR),
     adminLimiter,
     CartController.getAllCarts,
   );
@@ -65,7 +65,7 @@ router
 router
   .route('/admin/summary')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     CartController.getCartInsights,
   );

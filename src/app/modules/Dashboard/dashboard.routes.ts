@@ -8,7 +8,7 @@ const router = Router();
 router
   .route('/overview')
   .get(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     actionLimiter,
     DashboardController.getDashboardOverview
   );

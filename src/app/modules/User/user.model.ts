@@ -46,7 +46,7 @@ const userSchema = new Schema<IUser, IUserModel>(
 
     otp: {
       type: String,
-      required: true,
+      select: 0,
     },
     lastOtpSent: {
       type: Date,
@@ -54,7 +54,7 @@ const userSchema = new Schema<IUser, IUserModel>(
 
     otpExpiry: {
       type: Date,
-      required: true,
+      select: 0,
     },
 
     isVerifiedByOTP: {
@@ -165,7 +165,7 @@ userSchema.pre('aggregate', function (this: Aggregate<IUser>) {
 userSchema.statics.isUserExistsByEmailWithPassword = async function (
   email: string,
 ): Promise<IUser | null> {
-  return await UserModel.findOne({ email }).select('+password');
+  return await UserModel.findOne({ email }).select('+password +otp +otpExpiry +lastOtpSent');
 };
 
 // isPasswordMatched

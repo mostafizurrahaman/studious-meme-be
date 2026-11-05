@@ -34,7 +34,9 @@ const getAnsweredQuestionsForProduct = asyncHandler(async (req, res) => {
 });
 
 const getAllQuestions = asyncHandler(async (req, res) => {
-  const result = await ProductQuestionService.getAllQuestionsFromDB(req.query);
+  const result = await ProductQuestionService.getAllQuestionsFromDB(
+    req.validateQuery || req.query,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ROLE } from '../User/user.constant';
 
 const passwordSchema = () =>
   z
@@ -20,6 +21,7 @@ const adminCreateSchema = z.object({
       .email({ message: 'Invalid email format!' })
       .transform((v) => v.toLowerCase()),
     password: passwordSchema(),
+    role: z.enum([ROLE.ADMIN, ROLE.MODERATOR]).optional(),
     phone: z.string().optional(),
     image: z.string().optional(),
   }),
@@ -45,13 +47,28 @@ const adminUpdateSchema = z.object({
       .email({ message: 'Invalid email format!' })
       .transform((v) => v.toLowerCase())
       .optional(),
+    role: z.enum([ROLE.ADMIN, ROLE.MODERATOR]).optional(),
     phone: z.string().optional(),
     image: z.string().optional(),
     isActive: z.boolean().optional(),
   }),
 });
 
+// 3. changeStaffPasswordSchema
+const changeStaffPasswordSchema = z.object({
+  params: z.object({
+    userId: z
+      .string({ error: 'User ID is required!' })
+      .trim()
+      .min(1, { message: 'User ID is required!' }),
+  }),
+  body: z.object({
+    password: passwordSchema(),
+  }),
+});
+
 export const AdminValidation = {
   adminCreateSchema,
   adminUpdateSchema,
+  changeStaffPasswordSchema,
 };

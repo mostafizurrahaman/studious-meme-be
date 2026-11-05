@@ -32,7 +32,7 @@ router
 router
   .route('/admin')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     WishlistHistoryController.getAllWishlist,
   );
@@ -40,7 +40,7 @@ router
 router
   .route('/admin/summary')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     WishlistHistoryController.getWishlistInsights,
   );

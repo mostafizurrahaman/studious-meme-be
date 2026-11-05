@@ -14,22 +14,23 @@ const createCategoryIntoDB = async (
   payload: Partial<ICategory>,
   imageFile?: MulterFile,
 ) => {
-  if (!imageFile) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Category image is required!');
-  }
+  let uploadedImage: string | undefined;
 
-  const { secure_url } = await sendImageToR2(
-    imageFile,
-    R2_FOLDERS.CATEGORY,
-  );
+  if (imageFile) {
+    const { secure_url } = await sendImageToR2(
+      imageFile,
+      R2_FOLDERS.CATEGORY,
+    );
+    uploadedImage = secure_url;
+  }
 
   const category = await CategoryModel.create({
     ...payload,
-    image: secure_url,
+    ...(uploadedImage ? { image: uploadedImage } : {}),
   });
 
-  if (!category) {
-    await deleteImageByUrl(secure_url);
+  if (!category && uploadedImage) {
+    await deleteImageByUrl(uploadedImage);
   }
 
   return category;

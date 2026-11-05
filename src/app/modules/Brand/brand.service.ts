@@ -10,19 +10,20 @@ const createBrandIntoDB = async (
   payload: Partial<IBrand>,
   imageFile?: MulterFile,
 ) => {
-  if (!imageFile) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Brand image is required!');
-  }
+  let uploadedImage: string | undefined;
 
-  const { secure_url } = await sendImageToR2(imageFile, R2_FOLDERS.BRAND);
+  if (imageFile) {
+    const { secure_url } = await sendImageToR2(imageFile, R2_FOLDERS.BRAND);
+    uploadedImage = secure_url;
+  }
 
   const brand = await BrandModel.create({
     ...payload,
-    image: secure_url,
+    ...(uploadedImage ? { image: uploadedImage } : {}),
   });
 
-  if (!brand) {
-    await deleteImageByUrl(secure_url);
+  if (!brand && uploadedImage) {
+    await deleteImageByUrl(uploadedImage);
   }
 
   return brand;

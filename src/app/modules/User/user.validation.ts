@@ -70,11 +70,9 @@ const verifySignupOtpSchema = z.object({
       }),
 
     otp: z
-      .string({
-        error: 'OTP is required!',
-      })
-      .min(6, { message: 'OTP must be at least 6 characters long!' })
-      .max(6, { message: 'OTP cannot exceed 6 characters!' }),
+      .string({ error: 'OTP is required!' })
+      .trim()
+      .regex(/^\d{6}$/, { message: 'OTP must be exactly 6 digits!' }),
   }),
 });
 
@@ -153,11 +151,9 @@ const verifyOtpForForgotPasswordSchema = z.object({
   body: z.object({
     token: z.string({ error: 'Token is required!' }),
     otp: z
-      .string({
-        error: 'OTP is required!',
-      })
-      .regex(/^\d+$/, { message: 'OTP must be a number!' })
-      .length(6, { message: 'OTP must be exactly 6 digits' }),
+      .string({ error: 'OTP is required!' })
+      .trim()
+      .regex(/^\d{6}$/, { message: 'OTP must be exactly 6 digits!' }),
   }),
 });
 

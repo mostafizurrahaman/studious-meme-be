@@ -7,22 +7,26 @@ const getSingleParam = (value: string | string[]) =>
 
 // 1. createAdmin
 const createAdmin = asyncHandler(async (req, res) => {
-  const result = await AdminService.createAdminIntoDB(req.body, req.file);
+  const result = await AdminService.createAdminIntoDB(
+    req.body,
+    req.user,
+    req.file,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
-    message: 'Admin created successfully!',
+    message: 'Staff created successfully!',
     data: result,
   });
 });
 
 // 2. getAllAdmins
-const getAllAdmins = asyncHandler(async (_req, res) => {
-  const result = await AdminService.getAllAdminsFromDB();
+const getAllAdmins = asyncHandler(async (req, res) => {
+  const result = await AdminService.getAllAdminsFromDB(req.user);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
-    message: 'Admins fetched successfully!',
+    message: 'Staff accounts fetched successfully!',
     data: result,
   });
 });
@@ -31,11 +35,12 @@ const getAllAdmins = asyncHandler(async (_req, res) => {
 const getAdmin = asyncHandler(async (req, res) => {
   const result = await AdminService.getAdminByIdFromDB(
     getSingleParam(req.params.userId),
+    req.user,
   );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
-    message: 'Admin fetched successfully!',
+    message: 'Staff account fetched successfully!',
     data: result,
   });
 });
@@ -45,12 +50,13 @@ const updateAdmin = asyncHandler(async (req, res) => {
   const result = await AdminService.updateAdminIntoDB(
     getSingleParam(req.params.userId),
     req.body,
+    req.user,
     req.file,
   );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
-    message: 'Admin updated successfully!',
+    message: 'Staff account updated successfully!',
     data: result,
   });
 });
@@ -63,7 +69,22 @@ const deleteAdmin = asyncHandler(async (req, res) => {
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
-    message: 'Admin deleted successfully!',
+    message: 'Staff account deleted successfully!',
+    data: result,
+  });
+});
+
+// 6. changeStaffPassword
+const changeStaffPassword = asyncHandler(async (req, res) => {
+  const result = await AdminService.changeStaffPasswordInDB(
+    getSingleParam(req.params.userId),
+    req.body.password,
+    req.user,
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    message: 'Staff password updated successfully!',
     data: result,
   });
 });
@@ -74,4 +95,5 @@ export const AdminController = {
   getAdmin,
   updateAdmin,
   deleteAdmin,
+  changeStaffPassword,
 };
