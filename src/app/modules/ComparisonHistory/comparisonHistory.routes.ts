@@ -16,12 +16,12 @@ const router = Router();
 router
   .route('/')
   .get(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN,  ROLE.MODERATOR),
     actionLimiter,
     ComparisonHistoryController.getMyComparisonHistory,
   )
   .post(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN,  ROLE.MODERATOR),
     actionLimiter,
     burstProtection('action', 10_000, 12),
     duplicateSubmissionGuard(),
@@ -32,7 +32,7 @@ router
 router
   .route('/my-items')
   .get(
-    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.USER, ROLE.ADMIN, ROLE.SUPER_ADMIN,  ROLE.MODERATOR),
     actionLimiter,
     ComparisonHistoryController.getMyComparisonHistory,
   );
@@ -41,7 +41,7 @@ router
 router
   .route('/admin')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     ComparisonHistoryController.getAllComparisonHistory,
   );
@@ -49,7 +49,7 @@ router
 router
   .route('/admin/summary')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     ComparisonHistoryController.getComparisonInsights,
   );

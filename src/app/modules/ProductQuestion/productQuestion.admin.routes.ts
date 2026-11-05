@@ -14,7 +14,7 @@ const router = Router();
 router
   .route('/')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     validateRequest(ProductQuestionValidation.adminQuestionListSchema),
     ProductQuestionController.getAllQuestions,
@@ -23,7 +23,7 @@ router
 router
   .route('/:id/answer')
   .patch(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     validateRequest(ProductQuestionValidation.answerQuestionSchema),
@@ -33,7 +33,7 @@ router
 router
   .route('/:id/status')
   .patch(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     validateRequest(ProductQuestionValidation.updateQuestionStatusSchema),

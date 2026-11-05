@@ -1,15 +1,8 @@
-import otpGenerator from 'otp-generator';
+import crypto from 'crypto';
 
-const generateOtp = () => {
-  const otp = otpGenerator.generate(6, {
-    upperCaseAlphabets: false,
-    specialChars: false,
-    lowerCaseAlphabets: false,
-  });
-
-  // const otp = Math.floor(100000 + Math.random() * 900000);
-
-  return otp;
+const generateOtp = (): string => {
+  // Generates a cryptographically secure 6-digit numeric OTP (100000 - 999999)
+  return crypto.randomInt(100000, 1000000).toString();
 };
 
 export default generateOtp;

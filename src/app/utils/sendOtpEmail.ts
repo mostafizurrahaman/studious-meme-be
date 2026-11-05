@@ -3,6 +3,10 @@ import nodemailer from 'nodemailer';
 import config from '../config';
 import AppError from './AppError';
 import path from 'path';
+import fs from 'fs';
+
+const FALLBACK_LOGO_URL =
+  'https://res.cloudinary.com/dweesppci/image/upload/v1777476137/1777476137166-KHALED-SIDDIQUE.png';
 
 const sendOtpEmail = async ({
   email,
@@ -22,71 +26,84 @@ const sendOtpEmail = async ({
   attachments?: { filename: string; path: string }[];
 }) => {
   try {
-    // Create a transporter for sending emails
+    const isCustomPort = Boolean(process.env.EMAIL_PORT_FOR_NODEMAILER);
+    const port = Number(process.env.EMAIL_PORT_FOR_NODEMAILER) || 465;
+    const secure = isCustomPort ? port === 465 : true;
+
+    // Create transporter for sending emails
     const transporter = nodemailer.createTransport({
       host: config.nodemailer.host,
-      port: 465,
-      secure: true, // true for 465, false for other ports
-      // service: 'gmail',
+      port,
+      secure,
       auth: {
         user: config.nodemailer.email,
         pass: config.nodemailer.password,
       },
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
     });
 
-    // Generate the HTML content dynamically
-    const htmlTemplate = generateEmailHTML(otp, name, logoCid, customMessage);
+    // Determine logo source safely
+    const localLogoPath = path.join(__dirname, 'assets', 'logo.png');
+    const hasLocalLogo =
+      config.NODE_ENV !== 'production' && fs.existsSync(localLogoPath);
+
+    const emailAttachments: Array<{
+      filename: string;
+      path: string;
+      cid?: string;
+    }> = [...attachments];
+
+    if (hasLocalLogo) {
+      emailAttachments.push({
+        filename: 'logo.png',
+        path: localLogoPath,
+        cid: logoCid,
+      });
+    }
+
+    // Generate HTML content dynamically
+    const htmlTemplate = generateEmailHTML(
+      otp,
+      name,
+      hasLocalLogo ? `cid:${logoCid}` : FALLBACK_LOGO_URL,
+      customMessage,
+    );
 
     // Email options: from, to, subject, and HTML body
     const mailOptions = {
-      from: `${config.preffered_website_name} 📰 <${config.nodemailer.email}>`,
+      from: `${config.preffered_website_name || 'Malamal'} <${config.nodemailer.email}>`,
       to: email,
-      subject: subject,
+      subject,
       html: htmlTemplate,
-      attachments: [
-        ...attachments, // Attach any custom attachments
-        {
-          filename: 'logo.png',
-          path:
-            config.NODE_ENV === 'production'
-              ? 'https://res.cloudinary.com/dweesppci/image/upload/v1777476137/1777476137166-KHALED-SIDDIQUE.png' // ✅ works on Vercel
-              : path.join(__dirname, 'assets', 'logo.png'), // ✅ works locally
-          cid: logoCid, // Embed logo with CID
-        },
-      ],
-
-      // attachments: [
-      //   ...attachments, // Attach any custom attachments
-      //   {
-      //     filename: 'logo.png',
-      //     path: path.join(__dirname, 'assets', 'logo.png'),
-      //     cid: logoCid, // Embed logo with CID
-      //   },
-      // ],
+      attachments: emailAttachments,
     };
 
-    // Send the email using Nodemailer
+    // Send email using Nodemailer
     await transporter.sendMail(mailOptions);
   } catch (error) {
-    // Log the error and throw a custom error with a message
     // eslint-disable-next-line no-console
-    console.log(error);
+    console.error('Nodemailer sendMail failed:', error);
     throw new AppError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      'Failed to send email',
+      'Failed to send verification email. Please try again later.',
     );
   }
 };
 
 export default sendOtpEmail;
 
-// Utility function to generate the email HTML content dynamically
+// Utility function to generate email HTML content dynamically
 const generateEmailHTML = (
   otp: string,
   name: string,
-  logoCid: string,
+  logoSrc: string,
   customMessage: string = '',
 ) => {
+  const brandName = config.preffered_website_name || 'Malamal';
+  const brandColor = config.emailColor || '#f54c16';
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -117,27 +134,29 @@ const generateEmailHTML = (
     }
     .header img {
       max-width: 180px;
+      max-height: 70px;
+      object-fit: contain;
       margin-bottom: 25px;
     }
     .header h2 {
-      color: ${config.emailColor};
-      font-size: 28px;
+      color: ${brandColor};
+      font-size: 26px;
       margin-bottom: 10px;
       font-weight: bold;
     }
     .otp {
-      font-size: 26px;
-      font-weight: bold;
-      color: ${config.emailColor};
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 6px;
+      color: ${brandColor};
       padding: 15px;
-      background-color: #FFF8E1; /* Light background */
-      border-left: 6px solid ${config.emailColor}; /* Purple left border */
+      background-color: #FFF8E1;
+      border-left: 6px solid ${brandColor};
       text-align: center;
       margin: 30px 0;
       border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
     }
-      
     .footer {
       text-align: center;
       font-size: 12px;
@@ -151,14 +170,15 @@ const generateEmailHTML = (
         padding: 20px;
       }
       .otp {
-        font-size: 22px;
-        padding: 15px;
+        font-size: 24px;
+        letter-spacing: 4px;
+        padding: 12px;
       }
       .footer {
         font-size: 10px;
       }
       .header h2 {
-        font-size: 24px;
+        font-size: 22px;
       }
     }
   </style>
@@ -167,8 +187,8 @@ const generateEmailHTML = (
 
   <div class="container">
     <div class="header">
-      <img src="cid:${logoCid}" alt="Logo">
-      <h2>Welcome to ${config.preffered_website_name}!</h2>
+      <img src="${logoSrc}" alt="${brandName} Logo">
+      <h2>Welcome to ${brandName}!</h2>
       <p>We're excited to have you with us.</p>
     </div>
 
@@ -179,19 +199,13 @@ const generateEmailHTML = (
       ${otp}
     </div>
 
-    <p>Please enter this OTP to complete your email verification and start using ${
-      config.preffered_website_name
-    }.</p>
+    <p>Please enter this OTP to complete your verification and start using ${brandName}.</p>
     <p><strong>Note:</strong> This OTP will expire in 5 minutes. Be sure to enter it before it expires.</p>
 
-    <!-- Optional Custom Message Section -->
     ${customMessage ? `<p><strong>Additional Info:</strong> ${customMessage}</p>` : ''}
 
-    <!-- Footer -->
     <div class="footer">
-      <p>Thank you for being a part of ${
-        config.preffered_website_name
-      }. If you did not request this, please ignore this email.</p>
+      <p>Thank you for choosing ${brandName}. If you did not request this, please ignore this email.</p>
     </div>
   </div>
 

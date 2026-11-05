@@ -3,6 +3,7 @@ import config from '../../config';
 export const ROLE = {
   USER: 'USER',
   ADMIN: 'ADMIN',
+  MODERATOR: 'MODERATOR',
   SUPER_ADMIN: 'SUPER_ADMIN',
 } as const;
 
@@ -13,7 +14,7 @@ export type ValueOf<T> = T[keyof T];
 export const defaultUserImage: string =
   'https://res.cloudinary.com/dweesppci/image/upload/v1746204369/wtmpcphfvexcq2ubcss0.png';
 
-export const OTP_EXPIRY_MINUTES = Number(config.otp_expiry_minutes);
+export const OTP_EXPIRY_MINUTES = Number(config.otp_expiry_minutes) || 5;
 
 export type TDeactiveAccountPayload = {
   email: string;

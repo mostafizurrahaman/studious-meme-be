@@ -12,9 +12,9 @@ export interface IUser extends Document {
   password: string;
   passwordChangedAt?: Date;
 
-  otp: string;
-  otpExpiry: Date;
-  lastOtpSent: Date;
+  otp?: string;
+  otpExpiry?: Date;
+  lastOtpSent?: Date;
   isVerifiedByOTP: boolean;
 
   role: TRole;

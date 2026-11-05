@@ -26,13 +26,26 @@ const statusBodySchema = z.object({
   status: z.enum(['pending', 'answered', 'hidden']),
 });
 
+const sanitizeOptionalString = z.preprocess((val) => {
+  if (typeof val !== 'string') return undefined;
+  const trimmed = val.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}, z.string().optional());
+
+const sanitizeStatus = z.preprocess((val) => {
+  if (typeof val !== 'string') return undefined;
+  const trimmed = val.trim().toLowerCase();
+  if (!trimmed || trimmed === 'all') return undefined;
+  return trimmed;
+}, z.enum(['pending', 'answered', 'hidden']).optional());
+
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  status: z.enum(['pending', 'answered', 'hidden']).optional(),
-  product: z.string().trim().optional(),
-  user: z.string().trim().optional(),
-  searchTerm: z.string().trim().optional(),
+  status: sanitizeStatus,
+  product: sanitizeOptionalString,
+  user: sanitizeOptionalString,
+  searchTerm: sanitizeOptionalString,
   sort: z
     .enum([
       'createdAt-desc',

@@ -1271,7 +1271,7 @@ const getActiveProductBySlugFromDB = async (slug: string) => {
     .populate({ path: 'category', match: { isActive: true } })
     .lean();
 
-    console.log(doc)
+  // console.log(doc)
 
   // if (!doc || !doc.brand || !doc.category)
   //   throw new AppError(httpStatus.NOT_FOUND, 'Product not found!');

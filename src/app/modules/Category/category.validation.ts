@@ -16,10 +16,7 @@ const categorySubCategorySchema = z.object({
       error: 'Image alt should be string',
     })
     .optional(),
-  description: z
-    .string({ error: 'SubCategory description is required!' })
-    .trim()
-    .min(1, { message: 'SubCategory description is required!' }),
+  description: z.string().trim().optional(),
   metaTitle: z
     .string({
       error: () => 'Meta title is required!',
@@ -63,10 +60,7 @@ const categoryBaseSchema = z.object({
     })
     .optional(),
 
-  description: z
-    .string({ error: 'Category description is required!' })
-    .trim()
-    .min(1, { message: 'Category description is required!' }),
+  description: z.string().trim().optional(),
   accent: z.string().optional(),
   isActive: z.boolean().optional(),
 });
@@ -166,9 +160,7 @@ export const CategoryValidation = {
         .trim()
         .min(1, { message: 'Category slug is required!' }),
     }),
-    body: categoryBaseSchema.partial().extend({
-      description: categoryBaseSchema.shape.description,
-    }),
+    body: categoryBaseSchema.partial(),
   }),
   categorySubCategoryCreateSchema: z.object({
     params: z.object({
@@ -190,9 +182,7 @@ export const CategoryValidation = {
         .trim()
         .min(1, { message: 'SubCategory slug is required!' }),
     }),
-    body: categorySubCategorySchema.partial().extend({
-      description: categorySubCategorySchema.shape.description,
-    }),
+    body: categorySubCategorySchema.partial(),
   }),
   getAllSubCategories,
   getSubcategoryBySlug,

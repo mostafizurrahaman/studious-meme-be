@@ -3,6 +3,7 @@ import {
   adminLimiter,
   auth,
   burstProtection,
+  validateRequest,
   validateRequestFromFormData,
 } from '../../middlewares';
 import { multerUpload } from '../../lib';
@@ -16,21 +17,40 @@ const router = Router();
 router
   .route('/admins')
   .post(
-    auth(ROLE.SUPER_ADMIN),
+    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN),
     adminLimiter,
     burstProtection('admin', 10_000, 12),
     multerUpload.single('image'),
     validateRequestFromFormData(AdminValidation.adminCreateSchema),
     AdminController.createAdmin,
   )
-  .get(auth(ROLE.SUPER_ADMIN), adminLimiter, AdminController.getAllAdmins);
+  .get(
+    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+    adminLimiter,
+    AdminController.getAllAdmins,
+  );
 
-// 2. getAdmin, updateAdmin, deleteAdmin
+// 2. changeStaffPassword
+router
+  .route('/admins/:userId/password')
+  .patch(
+    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+    adminLimiter,
+    burstProtection('admin', 10_000, 10),
+    validateRequest(AdminValidation.changeStaffPasswordSchema),
+    AdminController.changeStaffPassword,
+  );
+
+// 3. getAdmin, updateAdmin, deleteAdmin
 router
   .route('/admins/:userId')
-  .get(auth(ROLE.SUPER_ADMIN), adminLimiter, AdminController.getAdmin)
+  .get(
+    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+    adminLimiter,
+    AdminController.getAdmin,
+  )
   .patch(
-    auth(ROLE.SUPER_ADMIN),
+    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN),
     adminLimiter,
     burstProtection('admin', 10_000, 12),
     multerUpload.single('image'),

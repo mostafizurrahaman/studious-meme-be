@@ -18,7 +18,7 @@ const router = Router();
 router
   .route('/products')
   .post(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     multerUpload.array('images', 5),
@@ -47,7 +47,7 @@ router
   .route('/products/:slug')
   .get(publicLimiter, ProductController.getProduct)
   .patch(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     multerUpload.array('images', 5),
@@ -75,7 +75,7 @@ router.route('/search').get(publicLimiter, ProductController.searchProducts);
 router
   .route('/:id/admin')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     ProductController.getProductDetailsForAdmin,
   );

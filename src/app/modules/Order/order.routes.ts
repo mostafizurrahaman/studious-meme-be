@@ -67,7 +67,7 @@ router
 router
   .route('/admin/orders')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     OrderController.getAllOrdersForAdmin,
   );
@@ -76,7 +76,7 @@ router
 router
   .route('/admin/orders/:orderId/status')
   .patch(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     validateRequest(OrderValidation.updateOrderStatusSchema),

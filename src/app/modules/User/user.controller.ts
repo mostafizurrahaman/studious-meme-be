@@ -18,7 +18,7 @@ const createUser = asyncHandler(async (req, res) => {
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
-    message: 'OTP sent successfully, verify your account in 5 minutes!',
+    message: `OTP sent successfully, verify your account in ${OTP_EXPIRY_MINUTES} minutes!`,
     data: result,
   });
 });

@@ -25,14 +25,14 @@ router
 router
   .route('/admin')
   .post(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     validateRequest(CouponValidation.couponCreateSchema),
     CouponController.createCoupon,
   )
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     CouponController.getAllCoupons,
   );
@@ -41,12 +41,12 @@ router
 router
   .route('/admin/:couponId')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     CouponController.getCoupon,
   )
   .patch(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     validateRequest(CouponValidation.couponUpdateSchema),
@@ -57,7 +57,7 @@ router
 router
   .route('/admin/:couponId')
   .delete(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     burstProtection('admin', 10_000, 15),
     CouponController.deleteCoupon,

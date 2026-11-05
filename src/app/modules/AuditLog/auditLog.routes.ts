@@ -9,7 +9,7 @@ const router = Router();
 router
   .route('/stats')
   .get(
-    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.MODERATOR),
     adminLimiter,
     AuditLogController.getAuditLogStats,
   );
@@ -18,7 +18,7 @@ router
 router
   .route('/')
   .get(
-    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.MODERATOR),
     adminLimiter,
     AuditLogController.getAllAuditLogs,
   );
@@ -27,7 +27,7 @@ router
 router
   .route('/:id')
   .get(
-    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+    auth(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.MODERATOR),
     adminLimiter,
     AuditLogController.getAuditLogById,
   );

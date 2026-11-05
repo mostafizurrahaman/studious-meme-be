@@ -42,7 +42,7 @@ router
 router
   .route('/portpos/refund/:orderId')
   .post(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     PaymentController.refundPortPosPayment,
   );
@@ -60,7 +60,7 @@ router
 router
   .route('/admin')
   .get(
-    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN),
+    auth(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.MODERATOR),
     adminLimiter,
     PaymentController.getAllPaymentsForAdmin,
   );

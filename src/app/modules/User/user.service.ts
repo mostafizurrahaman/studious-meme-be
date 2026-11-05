@@ -26,72 +26,80 @@ import { PipelineStage } from 'mongoose';
 
 // 1. createUserIntoDB
 const createUserIntoDB = async (payload: IUser) => {
+  const normalizedEmail = payload.email?.toLowerCase()?.trim();
   const existingUser = await UserModel.isUserExistsByEmailWithPassword(
-    payload.email,
+    normalizedEmail,
   );
 
-  // if user exists but unverified
-  if (existingUser && !existingUser.isVerifiedByOTP) {
-    const now = new Date();
-
-    // if OTP expired sending new otp
-    if (!existingUser.otpExpiry || existingUser.otpExpiry < now) {
-      const otp = generateOtp();
-      await sendOtpEmail({ email: payload?.email, otp, name: payload?.name });
-
-      existingUser.otp = otp;
-      existingUser.otpExpiry = new Date(
-        now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000,
-      );
-      existingUser.lastOtpSent = new Date();
-      await existingUser.save();
-
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        'You have an unverified account, verify it with the new OTP sent to the mail!',
-        { isVerified: false },
-      );
-    } else {
-      // if OTP is valid till now
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        'You have an unverified account, verify it now with the otp sent to the mail!',
-        { isVerified: false },
-      );
-    }
-  }
-
+  // If user is already verified
   if (existingUser && existingUser.isVerifiedByOTP) {
-    // if user is already verified
     throw new AppError(httpStatus.BAD_REQUEST, 'User already exists!');
   }
 
-  if (!existingUser) {
-    //  OTP generating and sending if user is new
-    const otp = generateOtp();
-    await sendOtpEmail({ email: payload?.email, otp, name: payload?.name });
-
-    // Save new user as unverified
+  // If user exists but is unverified (handle resend/retry)
+  if (existingUser && !existingUser.isVerifiedByOTP) {
     const now = new Date();
-    const newUser = await UserModel.create({
-      ...payload,
-      otp,
-      otpExpiry: new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000),
-      lastOtpSent: new Date(),
-      isVerifiedByOTP: false,
-    });
+    const isWithinCooldown =
+      existingUser.lastOtpSent &&
+      now.getTime() < existingUser.lastOtpSent.getTime() + 60 * 1000;
+
+    let otp = existingUser.otp;
+    let otpExpiry = existingUser.otpExpiry;
+
+    if (!isWithinCooldown) {
+      otp = generateOtp();
+      otpExpiry = new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+      await sendOtpEmail({
+        email: existingUser.email,
+        otp,
+        name: payload?.name || existingUser.name,
+      });
+
+      existingUser.otp = otp;
+      existingUser.otpExpiry = otpExpiry;
+      existingUser.lastOtpSent = now;
+    }
+
+    if (payload.name) existingUser.name = payload.name;
+    if (payload.password) existingUser.password = payload.password;
+
+    await existingUser.save();
 
     return {
-      userEmail: newUser.email,
+      userEmail: existingUser.email,
     };
   }
+
+  // Brand new user registration
+  const otp = generateOtp();
+  await sendOtpEmail({
+    email: normalizedEmail,
+    otp,
+    name: payload?.name,
+  });
+
+  const now = new Date();
+  const newUser = await UserModel.create({
+    ...payload,
+    email: normalizedEmail,
+    otp,
+    otpExpiry: new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000),
+    lastOtpSent: now,
+    isVerifiedByOTP: false,
+  });
+
+  return {
+    userEmail: newUser.email,
+  };
 };
 
 // 2. sendSignupOtpAgainIntoDB
 const sendSignupOtpAgainIntoDB = async (userEmail: string) => {
   const now = new Date();
+  const normalizedEmail = userEmail?.toLowerCase()?.trim();
 
-  const user = await UserModel.isUserExistsByEmailWithPassword(userEmail);
+  const user = await UserModel.isUserExistsByEmailWithPassword(normalizedEmail);
 
   if (!user) {
     throw new AppError(
@@ -122,20 +130,25 @@ const sendSignupOtpAgainIntoDB = async (userEmail: string) => {
     );
   }
 
-  // OTP expired or doesn't exist -> generate a new OTP
   const otp = generateOtp();
 
-  user.otp = otp;
-  user.otpExpiry = new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000);
-  user.lastOtpSent = now;
-
-  await user.save();
-
+  // Send email first
   await sendOtpEmail({
     email: user.email,
     otp,
     name: user.name,
   });
+
+  await UserModel.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        otp,
+        otpExpiry: new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000),
+        lastOtpSent: now,
+      },
+    },
+  );
 
   return {
     userEmail: user.email,
@@ -145,7 +158,10 @@ const sendSignupOtpAgainIntoDB = async (userEmail: string) => {
 // 3. verifySignupOtpIntoDB
 const verifySignupOtpIntoDB = async (userEmail: string, otp: string) => {
   const now = new Date();
-  const user = await UserModel.isUserExistsByEmailWithPassword(userEmail);
+  const normalizedEmail = userEmail?.toLowerCase()?.trim();
+  const submittedOtp = otp?.toString()?.trim();
+
+  const user = await UserModel.isUserExistsByEmailWithPassword(normalizedEmail);
 
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, 'User not found!');
@@ -163,19 +179,23 @@ const verifySignupOtpIntoDB = async (userEmail: string, otp: string) => {
   if (!user.otpExpiry || user.otpExpiry < now) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      'OTP has been expired. Please request a new one!',
+      'OTP has expired. Please request a new one!',
     );
   }
 
   // If OTP is invalid, throw error
-  if (user?.otp !== otp) {
+  if (!user.otp || user.otp.toString().trim() !== submittedOtp) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Invalid OTP!');
   }
 
-  // Mark user as verified
-  user.otpExpiry = new Date();
-  user.isVerifiedByOTP = true;
-  await user.save();
+  // Mark user as verified and delete OTP
+  await UserModel.updateOne(
+    { _id: user._id },
+    {
+      $set: { isVerifiedByOTP: true },
+      $unset: { otp: 1, otpExpiry: 1 },
+    },
+  );
 
   // Prepare user data for token generation
   const accessTokenPayload = {
@@ -199,14 +219,13 @@ const verifySignupOtpIntoDB = async (userEmail: string, otp: string) => {
   return {
     accessToken,
     refreshToken,
-    // user: accessTokenPayload,
   };
 };
 
 // 4. signinIntoDB
 const signinIntoDB = async (payload: { email: string; password: string }) => {
-  // const user = await UserModel.findOne({ email: payload.email }).select('+password');
-  const user = await UserModel.isUserExistsByEmailWithPassword(payload.email);
+  const normalizedEmail = payload.email?.toLowerCase()?.trim();
+  const user = await UserModel.isUserExistsByEmailWithPassword(normalizedEmail);
 
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, 'User does not exist!');
@@ -216,37 +235,34 @@ const signinIntoDB = async (payload: { email: string; password: string }) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'User is not active!');
   }
 
-  // no need this part as isDeleted is functioned to hide the soft deleted user
-  // if (user.isDeleted) {
-  //   throw new AppError(httpStatus.BAD_REQUEST, 'You are not authorized!');
-  // }
-
   if (!user.isVerifiedByOTP) {
     const now = new Date();
+    const isWithinCooldown =
+      user.lastOtpSent &&
+      now.getTime() < user.lastOtpSent.getTime() + 60 * 1000;
 
-    // if OTP expired sending new otp
-    if (!user.otpExpiry || user.otpExpiry < now) {
+    // If OTP expired and outside cooldown, send new otp
+    if (!isWithinCooldown && (!user.otpExpiry || user.otpExpiry < now)) {
       const otp = generateOtp();
       await sendOtpEmail({ email: user?.email, otp, name: user?.name });
 
-      user.otp = otp;
-      user.otpExpiry = new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000);
-      user.lastOtpSent = new Date();
-      await user.save();
-
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        'You have an unverified account, verify it with the new OTP sent to the mail!',
-        { isVerified: false },
-      );
-    } else {
-      // if OTP is valid till now
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        'You have an unverified account, verify it now with the otp sent to the mail!',
-        { isVerified: false },
+      await UserModel.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            otp,
+            otpExpiry: new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000),
+            lastOtpSent: now,
+          },
+        },
       );
     }
+
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'You have an unverified account. Please verify your account with the OTP sent to your email.',
+      { isVerified: false },
+    );
   }
 
   // Validate password
@@ -270,6 +286,7 @@ const signinIntoDB = async (payload: { email: string; password: string }) => {
   const refreshTokenPayload = {
     email: user?.email,
   };
+
   // tokens
   const accessToken = createAccessToken(accessTokenPayload);
   const refreshToken = createRefreshToken(refreshTokenPayload);
@@ -277,7 +294,6 @@ const signinIntoDB = async (payload: { email: string; password: string }) => {
   return {
     accessToken,
     refreshToken,
-    // user: accessTokenPayload,
   };
 };
 
@@ -433,7 +449,11 @@ const changePasswordIntoDB = async (
 
 // 8. forgotPassword 1.(send OTP)
 const forgotPassword = async (email: string) => {
-  const user = await UserModel.findOne({ email, isActive: true });
+  const normalizedEmail = email?.toLowerCase()?.trim();
+  const user = await UserModel.findOne({
+    email: normalizedEmail,
+    isActive: true,
+  }).select('+otp +otpExpiry +lastOtpSent');
 
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, 'User not found!');
@@ -441,66 +461,7 @@ const forgotPassword = async (email: string) => {
 
   const now = new Date();
 
-  // If OTP exists and not expired, reuse it
-  if (user.otp && user.otpExpiry && now < user.otpExpiry) {
-    // Do nothing, just reuse existing OTP
-    const remainingMs = user.otpExpiry.getTime() - now.getTime();
-    const remainingMinutes = Math.ceil(remainingMs / (60 * 1000));
-
-    // await sendOtpEmail({email: user?.email, otp: user?.otp, name: user?.name});
-
-    throw new AppError(
-      httpStatus.NOT_FOUND,
-      `Last OTP is valid till now, use that in ${remainingMinutes} minutes!`,
-    );
-  } else {
-    // Generate new OTP
-    const otp = generateOtp();
-    const otpExpiry = new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000);
-
-    user.otp = otp;
-    user.otpExpiry = otpExpiry;
-    user.lastOtpSent = new Date();
-    await user.save();
-
-    // Send OTP
-    await sendOtpEmail({ email, otp, name: user?.name });
-  }
-
-  // Issue token (just with email)
-  const token = jwt.sign({ email }, config.jwt.otp_secret!, {
-    expiresIn: config.jwt.otp_secret_expires_in!,
-  } as SignOptions);
-
-  return { token };
-};
-
-// 9. sendForgotPasswordOtpAgain 2.(send OTP again)
-const sendForgotPasswordOtpAgain = async (forgotPassToken: string) => {
-  let decoded: JwtPayload;
-  try {
-    decoded = jwt.verify(forgotPassToken, config.jwt.otp_secret!, {
-      ignoreExpiration: true,
-    }) as JwtPayload;
-  } catch {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid token!');
-  }
-
-  const email = decoded.email as string;
-
-  if (!email) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid token!');
-  }
-
-  const user = await UserModel.findOne({ email, isActive: true });
-
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User not found!');
-  }
-
-  const now = new Date();
-
-  // If OTP exists and not expired, reuse it
+  // Cooldown check (60 seconds)
   if (
     user.lastOtpSent &&
     now.getTime() < user.lastOtpSent.getTime() + 60 * 1000
@@ -513,19 +474,111 @@ const sendForgotPasswordOtpAgain = async (forgotPassToken: string) => {
       httpStatus.TOO_MANY_REQUESTS,
       `Please wait ${remainingSeconds} seconds before requesting another OTP.`,
     );
-  } else {
-    // Generate new OTP
-    const otp = generateOtp();
-    const otpExpiry = new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000);
-
-    user.otp = otp;
-    user.otpExpiry = otpExpiry;
-    user.lastOtpSent = new Date();
-    await user.save();
-
-    // Send OTP
-    await sendOtpEmail({ email, otp, name: user?.name });
   }
+
+  // Generate new OTP
+  const otp = generateOtp();
+  const otpExpiry = new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+  // Send OTP email first
+  await sendOtpEmail({
+    email: user.email,
+    otp,
+    name: user.name,
+    subject: 'Your Password Reset OTP',
+  });
+
+  // Update OTP in DB
+  await UserModel.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        otp,
+        otpExpiry,
+        lastOtpSent: now,
+      },
+    },
+  );
+
+  // Issue token (contains email)
+  const token = jwt.sign({ email: user.email }, config.jwt.otp_secret!, {
+    expiresIn: config.jwt.otp_secret_expires_in!,
+  } as SignOptions);
+
+  return { token };
+};
+
+// 9. sendForgotPasswordOtpAgain 2.(send OTP again)
+const sendForgotPasswordOtpAgain = async (forgotPassToken: string) => {
+  if (!forgotPassToken) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Token is required!');
+  }
+
+  let decoded: JwtPayload;
+  try {
+    decoded = jwt.verify(forgotPassToken, config.jwt.otp_secret!, {
+      ignoreExpiration: true,
+    }) as JwtPayload;
+  } catch {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid token!');
+  }
+
+  const email = decoded.email as string;
+
+  if (!email) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid token payload!');
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await UserModel.findOne({
+    email: normalizedEmail,
+    isActive: true,
+  }).select('+otp +otpExpiry +lastOtpSent');
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found!');
+  }
+
+  const now = new Date();
+
+  // Prevent resending within 1 minute
+  if (
+    user.lastOtpSent &&
+    now.getTime() < user.lastOtpSent.getTime() + 60 * 1000
+  ) {
+    const remainingSeconds = Math.ceil(
+      (user.lastOtpSent.getTime() + 60 * 1000 - now.getTime()) / 1000,
+    );
+
+    throw new AppError(
+      httpStatus.TOO_MANY_REQUESTS,
+      `Please wait ${remainingSeconds} seconds before requesting another OTP.`,
+    );
+  }
+
+  // Generate new OTP
+  const otp = generateOtp();
+  const otpExpiry = new Date(now.getTime() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+  // Send email first
+  await sendOtpEmail({
+    email: user.email,
+    otp,
+    name: user.name,
+    subject: 'Your Password Reset OTP',
+  });
+
+  // Update in DB
+  await UserModel.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        otp,
+        otpExpiry,
+        lastOtpSent: now,
+      },
+    },
+  );
 
   return null;
 };
@@ -535,6 +588,10 @@ const verifyOtpForForgotPassword = async (payload: {
   token: string;
   otp: string;
 }) => {
+  if (!payload?.token) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Token is required!');
+  }
+
   let decoded: JwtPayload;
   try {
     decoded = jwt.verify(payload.token, config.jwt.otp_secret!, {
@@ -545,39 +602,43 @@ const verifyOtpForForgotPassword = async (payload: {
   }
 
   const email = decoded.email as string;
+  if (!email) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid token payload!');
+  }
 
-  const user = await UserModel.findOne({ email, isActive: true });
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = await UserModel.findOne({
+    email: normalizedEmail,
+    isActive: true,
+  }).select('+otp +otpExpiry +lastOtpSent');
 
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, 'User not found!');
   }
 
-  // Check if OTP expired
-  if (!user.otp || !user.otpExpiry || Date.now() > user.otpExpiry.getTime()) {
-    // Generate and send new OTP
-    const newOtp = generateOtp();
-    const newExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+  const now = new Date();
 
-    user.otp = newOtp;
-    user.otpExpiry = newExpiry;
-    user.lastOtpSent = new Date();
-    await user.save();
-
-    await sendOtpEmail({ email, otp: newOtp, name: user?.name });
-
+  // Check if OTP is expired or not set
+  if (!user.otp || !user.otpExpiry || now > user.otpExpiry) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      'OTP expired. A new OTP has been sent!',
+      'OTP has expired. Please request a new one!',
     );
   }
 
   // Check if OTP matches
-  if (user.otp !== payload.otp) {
+  const submittedOtp = payload.otp?.toString()?.trim();
+  if (user.otp.toString().trim() !== submittedOtp) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Invalid OTP!');
   }
 
-  user.otpExpiry = new Date();
-  await user.save();
+  // Invalidate OTP immediately so it cannot be reused
+  await UserModel.updateOne(
+    { _id: user._id },
+    {
+      $unset: { otp: 1, otpExpiry: 1 },
+    },
+  );
 
   // OTP verified → issue reset password token
   const resetPasswordToken = jwt.sign(
@@ -614,8 +675,9 @@ const resetPasswordIntoDB = async (
     throw new AppError(httpStatus.FORBIDDEN, 'Invalid reset password token!');
   }
 
+  const normalizedEmail = resetPasswordPayload.email?.toLowerCase()?.trim();
   const user = await UserModel.findOne({
-    email: resetPasswordPayload.email,
+    email: normalizedEmail,
     isActive: true,
   });
 
@@ -624,9 +686,6 @@ const resetPasswordIntoDB = async (
   }
 
   user.password = newPassword;
-  // user.passwordChangedAt = new Date(Date.now());
-
-  // await user.save({ validateBeforeSave: true }) // by default true
   await user.save();
 
   return null;
